@@ -3,6 +3,7 @@ members = [
     "crates/audio-test-harness",
     "crates/prophet-dsp",
     "crates/prophet-plugin",
+    "crates/prophet-wasm",
     "xtask",
 ]
 resolver = "2"

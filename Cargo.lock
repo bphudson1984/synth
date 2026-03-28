@@ -1607,6 +1607,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "prophet-wasm"
+version = "0.1.0"
+dependencies = [
+ "prophet-dsp",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
