@@ -35,7 +35,7 @@ export class AudioEngine {
                     resolve();
                 } else if (e.data.type === 'error') {
                     clearTimeout(timeout);
-                    reject(new Error(e.data.message ?? 'Worklet initialization failed'));
+                    reject(new Error(e.data.message ?? 'Worklet initialization failed: unknown error'));
                 }
             };
 
