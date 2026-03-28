@@ -14,7 +14,7 @@ export class AudioEngine {
         const wasmBytes = await wasmResponse.arrayBuffer();
 
         // Load worklet processor
-        await this.ctx.audioWorklet.addModule('/worklet-processor.js');
+        await this.ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'worklet-processor.js');
 
         // Create node with stereo output
         this.node = new AudioWorkletNode(this.ctx, 'prophet-processor', {

@@ -1,9 +1,12 @@
 [workspace]
 members = [
     "crates/audio-test-harness",
+    "crates/dsp-common",
     "crates/prophet-dsp",
     "crates/prophet-plugin",
     "crates/prophet-wasm",
+    "crates/tr808-dsp",
+    "crates/tr808-wasm",
     "xtask",
 ]
 resolver = "2"

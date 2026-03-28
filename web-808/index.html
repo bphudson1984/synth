@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TR-808 Drum Machine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #1a1a1a;
+            color: #eee;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 16px;
+            letter-spacing: 4px;
+            color: #ff6b35;
+            margin-bottom: 4px;
+        }
+        h2 {
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+        #start-btn {
+            padding: 14px 48px;
+            font-size: 16px;
+            background: #ff6b35;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            font-weight: bold;
+        }
+        #start-btn:hover { background: #ff8555; }
+        #status { margin: 10px 0; font-size: 12px; color: #888; }
+
+        .machine { display: none; width: 100%; max-width: 900px; }
+        .machine.active { display: block; }
+
+        .pads {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .pad {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.05s, filter 0.05s;
+            border: 2px solid rgba(255,255,255,0.1);
+            position: relative;
+        }
+        .pad:active, .pad.hit {
+            transform: scale(0.95);
+            filter: brightness(1.3);
+        }
+        .pad .name {
+            font-size: 14px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .pad .key {
+            font-size: 11px;
+            opacity: 0.5;
+            margin-top: 4px;
+        }
+
+        /* 808 color scheme */
+        .pad-bd { background: linear-gradient(135deg, #d32f2f, #b71c1c); }
+        .pad-sd { background: linear-gradient(135deg, #f57c00, #e65100); }
+        .pad-lt { background: linear-gradient(135deg, #fbc02d, #f9a825); color: #333; }
+        .pad-mt { background: linear-gradient(135deg, #fbc02d, #f9a825); color: #333; }
+        .pad-ht { background: linear-gradient(135deg, #fbc02d, #f9a825); color: #333; }
+        .pad-rs { background: linear-gradient(135deg, #7b1fa2, #6a1b9a); }
+        .pad-cp { background: linear-gradient(135deg, #e91e63, #c2185b); }
+        .pad-ch { background: linear-gradient(135deg, #00897b, #00695c); }
+        .pad-oh { background: linear-gradient(135deg, #00897b, #00695c); }
+        .pad-cy { background: linear-gradient(135deg, #1565c0, #0d47a1); }
+        .pad-cb { background: linear-gradient(135deg, #ff6f00, #e65100); }
+        .pad-ma { background: linear-gradient(135deg, #558b2f, #33691e); }
+        .pad-cl { background: linear-gradient(135deg, #4e342e, #3e2723); }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+            padding: 15px;
+            background: #222;
+            border-radius: 8px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .control-group label {
+            font-size: 9px;
+            color: #999;
+            letter-spacing: 1px;
+        }
+        .control-group input[type="range"] {
+            width: 80px;
+            accent-color: #ff6b35;
+        }
+
+        .sequencer {
+            margin: 20px 0;
+            background: #222;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .seq-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+        .seq-controls button {
+            padding: 8px 20px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            letter-spacing: 1px;
+        }
+        .seq-controls button:hover { background: #444; }
+        .seq-controls button.playing { background: #ff6b35; border-color: #ff8555; }
+        #bpm-display { font-size: 12px; color: #ff6b35; min-width: 30px; }
+
+        .step-grid {
+            display: grid;
+            grid-template-columns: 50px repeat(16, 1fr);
+            gap: 3px;
+        }
+        .step-label {
+            font-size: 10px;
+            color: #999;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 6px;
+            letter-spacing: 0.5px;
+        }
+        .step-btn {
+            aspect-ratio: 1;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            background: #333;
+            transition: background 0.05s;
+            min-height: 20px;
+        }
+        .step-btn:hover { background: #444; }
+        .step-btn.active { background: #ff6b35; }
+        .step-btn.beat { border-bottom: 2px solid #555; }
+        .step-btn.current { box-shadow: inset 0 0 0 2px #fff; }
+
+        .keyboard-hint {
+            font-size: 11px;
+            color: #555;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .keyboard-hint kbd {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border: 1px solid #555;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>ROLAND</h1>
+    <h2>TR-808</h2>
+
+    <button id="start-btn">START</button>
+    <div id="status"></div>
+
+    <div class="machine" id="machine">
+        <div class="pads" id="pads">
+            <div class="pad pad-bd" data-voice="0"><span class="name">BD</span><span class="key">Q</span></div>
+            <div class="pad pad-sd" data-voice="1"><span class="name">SD</span><span class="key">W</span></div>
+            <div class="pad pad-lt" data-voice="2"><span class="name">LT</span><span class="key">E</span></div>
+            <div class="pad pad-mt" data-voice="3"><span class="name">MT</span><span class="key">R</span></div>
+            <div class="pad pad-ht" data-voice="4"><span class="name">HT</span><span class="key">T</span></div>
+            <div class="pad pad-rs" data-voice="5"><span class="name">RS</span><span class="key">Y</span></div>
+            <div class="pad pad-cp" data-voice="6"><span class="name">CP</span><span class="key">U</span></div>
+            <div class="pad pad-ch" data-voice="7"><span class="name">CH</span><span class="key">A</span></div>
+            <div class="pad pad-oh" data-voice="8"><span class="name">OH</span><span class="key">S</span></div>
+            <div class="pad pad-cy" data-voice="9"><span class="name">CY</span><span class="key">D</span></div>
+            <div class="pad pad-cb" data-voice="10"><span class="name">CB</span><span class="key">F</span></div>
+            <div class="pad pad-ma" data-voice="11"><span class="name">MA</span><span class="key">G</span></div>
+            <div class="pad pad-cl" data-voice="12"><span class="name">CL</span><span class="key">H</span></div>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>BD TONE</label>
+                <input type="range" min="0" max="100" value="50"
+                    oninput="setParam(0, 1, this.value/100)">
+            </div>
+            <div class="control-group">
+                <label>BD DECAY</label>
+                <input type="range" min="0" max="100" value="50"
+                    oninput="setParam(0, 2, this.value/100)">
+            </div>
+            <div class="control-group">
+                <label>SD TONE</label>
+                <input type="range" min="0" max="100" value="50"
+                    oninput="setParam(1, 1, this.value/100)">
+            </div>
+            <div class="control-group">
+                <label>SD SNAPPY</label>
+                <input type="range" min="0" max="100" value="50"
+                    oninput="setParam(1, 2, this.value/100)">
+            </div>
+        </div>
+
+        <!-- Step Sequencer -->
+        <div class="sequencer">
+            <div class="seq-controls">
+                <button id="play-btn" onclick="togglePlay()">&#9654; PLAY</button>
+                <button onclick="seqClear()">CLEAR</button>
+                <div class="control-group">
+                    <label>BPM</label>
+                    <input type="range" min="30" max="300" value="120" id="bpm-slider"
+                        oninput="setBpm(this.value)">
+                    <span id="bpm-display">120</span>
+                </div>
+                <div class="control-group">
+                    <label>SWING</label>
+                    <input type="range" min="0" max="100" value="50"
+                        oninput="setSwing(this.value/100)">
+                </div>
+            </div>
+            <div class="step-grid" id="step-grid"></div>
+        </div>
+
+        <div class="keyboard-hint">
+            <kbd>Q</kbd>BD <kbd>W</kbd>SD <kbd>E</kbd>LT <kbd>R</kbd>MT <kbd>T</kbd>HT
+            <kbd>Y</kbd>RS <kbd>U</kbd>CP <kbd>A</kbd>CH <kbd>S</kbd>OH <kbd>D</kbd>CY
+            <kbd>F</kbd>CB <kbd>G</kbd>MA <kbd>H</kbd>CL
+        </div>
+    </div>
+
+    <script>
+        let node, ready = false;
+
+        const KEY_MAP = {
+            'q': 0, 'w': 1, 'e': 2, 'r': 3, 't': 4,
+            'y': 5, 'u': 6, 'a': 7, 's': 8, 'd': 9,
+            'f': 10, 'g': 11, 'h': 12,
+        };
+
+        async function start() {
+            const btn = document.getElementById('start-btn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            status.textContent = 'Loading...';
+
+            try {
+                const ctx = new AudioContext({ sampleRate: 48000 });
+                const wasmModule = await WebAssembly.compileStreaming(fetch('/public/tr808.wasm'));
+                await ctx.audioWorklet.addModule('/public/worklet-processor.js');
+
+                node = new AudioWorkletNode(ctx, 'tr808-processor', {
+                    outputChannelCount: [2], numberOfOutputs: 1,
+                });
+
+                await new Promise(resolve => {
+                    node.port.onmessage = (e) => { if (e.data.type === 'ready') resolve(); };
+                    node.port.postMessage({ type: 'wasm-module', module: wasmModule });
+                });
+
+                node.connect(ctx.destination);
+                ready = true;
+                btn.style.display = 'none';
+                status.textContent = '';
+                document.getElementById('machine').classList.add('active');
+
+                // MIDI
+                if (navigator.requestMIDIAccess) {
+                    try {
+                        const midi = await navigator.requestMIDIAccess();
+                        for (const input of midi.inputs.values()) input.onmidimessage = handleMIDI;
+                    } catch {}
+                }
+            } catch (err) {
+                status.textContent = 'Error: ' + err.message;
+                btn.disabled = false;
+            }
+        }
+
+        function triggerVoice(v) {
+            if (!ready) return;
+            node.port.postMessage({ type: 'trigger', voice: v });
+            // Visual feedback
+            const pad = document.querySelector(`[data-voice="${v}"]`);
+            if (pad) {
+                pad.classList.add('hit');
+                setTimeout(() => pad.classList.remove('hit'), 100);
+            }
+        }
+
+        function setParam(voice, param, value) {
+            if (!ready) return;
+            node.port.postMessage({ type: 'set-param', voice, param, value });
+        }
+
+        // MIDI: map notes 36-48 to voices (standard GM drum map)
+        const MIDI_MAP = { 36: 0, 38: 1, 41: 2, 43: 2, 45: 3, 47: 3, 48: 4, 50: 4,
+            37: 5, 39: 6, 42: 7, 44: 7, 46: 8, 49: 9, 51: 9, 56: 10, 70: 11, 75: 12 };
+
+        function handleMIDI(e) {
+            const [st, d1, d2] = e.data;
+            if ((st & 0xF0) === 0x90 && d2 > 0 && d1 in MIDI_MAP) {
+                triggerVoice(MIDI_MAP[d1]);
+            }
+        }
+
+        document.getElementById('start-btn').addEventListener('click', start);
+
+        // Pad clicks
+        document.getElementById('pads')?.addEventListener('pointerdown', (e) => {
+            const pad = e.target.closest('.pad');
+            if (pad) triggerVoice(parseInt(pad.dataset.voice));
+        });
+
+        // Keyboard triggers
+        document.addEventListener('keydown', (e) => {
+            if (e.repeat || !ready) return;
+            const v = KEY_MAP[e.key.toLowerCase()];
+            if (v !== undefined) triggerVoice(v);
+            if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+        });
+
+        // Sequencer
+        const VOICE_NAMES = ['BD','SD','LT','MT','HT','RS','CP','CH','OH','CY','CB','MA','CL'];
+        const VOICE_COLORS = ['#d32f2f','#f57c00','#fbc02d','#fbc02d','#fbc02d','#7b1fa2','#e91e63','#00897b','#00897b','#1565c0','#ff6f00','#558b2f','#4e342e'];
+        let playing = false;
+        const stepState = Array.from({length: 13}, () => Array(16).fill(false));
+
+        function buildGrid() {
+            const grid = document.getElementById('step-grid');
+            grid.innerHTML = '';
+            // Header row with step numbers
+            grid.appendChild(Object.assign(document.createElement('div'), { className: 'step-label' }));
+            for (let s = 0; s < 16; s++) {
+                const num = document.createElement('div');
+                num.style.cssText = 'font-size:9px;color:#666;text-align:center;';
+                num.textContent = s + 1;
+                grid.appendChild(num);
+            }
+            // Track rows
+            for (let t = 0; t < 13; t++) {
+                const label = document.createElement('div');
+                label.className = 'step-label';
+                label.textContent = VOICE_NAMES[t];
+                label.style.color = VOICE_COLORS[t];
+                grid.appendChild(label);
+                for (let s = 0; s < 16; s++) {
+                    const btn = document.createElement('button');
+                    btn.className = 'step-btn' + (s % 4 === 0 ? ' beat' : '');
+                    btn.dataset.track = t;
+                    btn.dataset.step = s;
+                    btn.id = `step-${t}-${s}`;
+                    btn.onclick = () => toggleStep(t, s);
+                    grid.appendChild(btn);
+                }
+            }
+        }
+
+        function toggleStep(track, step) {
+            if (!ready) return;
+            stepState[track][step] = !stepState[track][step];
+            const btn = document.getElementById(`step-${track}-${step}`);
+            btn.classList.toggle('active', stepState[track][step]);
+            node.port.postMessage({ type: 'seq-toggle', track, step });
+        }
+
+        function togglePlay() {
+            if (!ready) return;
+            playing = !playing;
+            node.port.postMessage({ type: playing ? 'seq-play' : 'seq-stop' });
+            document.getElementById('play-btn').classList.toggle('playing', playing);
+            document.getElementById('play-btn').innerHTML = playing ? '&#9724; STOP' : '&#9654; PLAY';
+        }
+
+        function setBpm(val) {
+            if (!ready) return;
+            node.port.postMessage({ type: 'seq-bpm', value: parseFloat(val) });
+            document.getElementById('bpm-display').textContent = val;
+        }
+
+        function setSwing(val) {
+            if (!ready) return;
+            node.port.postMessage({ type: 'seq-swing', value: val });
+        }
+
+        function seqClear() {
+            if (!ready) return;
+            node.port.postMessage({ type: 'seq-clear' });
+            for (let t = 0; t < 13; t++)
+                for (let s = 0; s < 16; s++) {
+                    stepState[t][s] = false;
+                    document.getElementById(`step-${t}-${s}`)?.classList.remove('active');
+                }
+        }
+
+        // Build grid on load (hidden until started)
+        buildGrid();
+    </script>
+</body>
+</html>
