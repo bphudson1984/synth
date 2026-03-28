@@ -1,0 +1,5 @@
+[package]
+name = "dsp-common"
+version = "0.1.0"
+edition = "2021"
+description = "Shared DSP primitives for audio synthesis"

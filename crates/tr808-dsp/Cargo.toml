@@ -1,5 +1,5 @@
 [package]
-name = "prophet-dsp"
+name = "tr808-dsp"
 version = "0.1.0"
 edition = "2021"
 

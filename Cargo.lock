@@ -514,6 +514,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
 
 [[package]]
+name = "dsp-common"
+version = "0.1.0"
+
+[[package]]
 name = "ecolor"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1595,6 +1599,7 @@ name = "prophet-dsp"
 version = "0.1.0"
 dependencies = [
  "audio-test-harness",
+ "dsp-common",
 ]
 
 [[package]]
@@ -2058,6 +2063,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2334f11ee363607eb04df9b8fc8a13ca1715a72ba8662a26ac285c98aabb4011"
 dependencies = [
  "winnow 1.0.0",
+]
+
+[[package]]
+name = "tr808-dsp"
+version = "0.1.0"
+dependencies = [
+ "audio-test-harness",
+ "dsp-common",
+]
+
+[[package]]
+name = "tr808-wasm"
+version = "0.1.0"
+dependencies = [
+ "tr808-dsp",
 ]
 
 [[package]]

@@ -1,0 +1,10 @@
+pub mod bass_drum;
+pub mod snare;
+pub mod hihat;
+pub mod clap;
+pub mod cowbell;
+pub mod tom;
+pub mod rimshot;
+pub mod clave;
+pub mod maracas;
+pub mod engine;
