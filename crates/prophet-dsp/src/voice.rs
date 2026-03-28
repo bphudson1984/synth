@@ -44,6 +44,23 @@ pub struct Voice {
 
     // Pitch bend (semitones, set by synth engine)
     pub pitch_bend_semitones: f32,
+
+    // Osc B independent pitch
+    pub osc_b_semitones: f32, // -24 to +24 (octave offset in semitones)
+    pub osc_b_fine: f32,      // -100 to +100 cents
+
+    // Velocity
+    velocity: f32, // 0.0-1.0
+
+    // Pulse width base values (before modulation)
+    pub osc_a_pw: f32,
+    pub osc_b_pw: f32,
+
+    // Unison detune offset (set by synth engine)
+    pub unison_detune_hz: f32,
+
+    // Filter drive
+    pub filter_drive: f32,
 }
 
 impl Voice {
@@ -80,6 +97,13 @@ impl Voice {
             wheel_mod_dest_pw_b: false,
             wheel_mod_dest_filter: false,
             pitch_bend_semitones: 0.0,
+            osc_b_semitones: 0.0,
+            osc_b_fine: 0.0,
+            velocity: 1.0,
+            osc_a_pw: 0.5,
+            osc_b_pw: 0.5,
+            unison_detune_hz: 0.0,
+            filter_drive: 1.0,
         }
     }
 
@@ -96,9 +120,10 @@ impl Voice {
         self.drift_b.set_amount(hz);
     }
 
-    pub fn note_on(&mut self, note: u8, _velocity: u8) {
+    pub fn note_on(&mut self, note: u8, velocity: u8) {
         self.note = note;
         self.active = true;
+        self.velocity = (velocity as f32 / 127.0).clamp(0.01, 1.0);
         let hz = tuning::note_to_hz(note);
         self.glide.set_target(hz);
         self.filter_env.gate_on();
@@ -124,12 +149,21 @@ impl Voice {
             return 0.0;
         }
 
+        // Velocity scaling
+        let vel = self.velocity;
+        let vel_amp = vel;                    // velocity → amplitude
+        let vel_filter = 0.3 + 0.7 * vel;    // velocity → filter env (always at least 30%)
+
         // Glide (portamento)
         let base_hz = self.glide.process(self.sample_rate);
 
         // Pitch bend
         let bend_factor = 2.0f32.powf(self.pitch_bend_semitones / 12.0);
-        let bent_hz = base_hz * bend_factor;
+        let bent_hz = (base_hz + self.unison_detune_hz) * bend_factor;
+
+        // Osc B independent pitch: semitone offset + fine tune in cents
+        let osc_b_ratio = 2.0f32.powf((self.osc_b_semitones + self.osc_b_fine / 100.0) / 12.0);
+        let osc_b_base_hz = bent_hz * osc_b_ratio;
 
         // Per-voice drift
         let drift_a = self.drift_a.process(self.sample_rate);
@@ -142,46 +176,40 @@ impl Voice {
         // Wheel Mod contributions
         let wm = self.wheel_mod_signal;
         let wm_freq_a = if self.wheel_mod_dest_freq_a { wm * bent_hz * 0.1 } else { 0.0 };
-        let wm_freq_b = if self.wheel_mod_dest_freq_b { wm * bent_hz * 0.1 } else { 0.0 };
+        let wm_freq_b = if self.wheel_mod_dest_freq_b { wm * osc_b_base_hz * 0.1 } else { 0.0 };
         let wm_filter = if self.wheel_mod_dest_filter { wm * 5000.0 } else { 0.0 };
 
-        // Set oscillator frequencies with drift
-        self.osc_b.set_frequency(bent_hz + drift_b + wm_freq_b);
+        // Osc B frequency: independent pitch + drift + wheel mod
+        self.osc_b.set_frequency(osc_b_base_hz + drift_b + wm_freq_b);
 
         // FM offset for Osc A from Poly Mod
+        // Scale by 4x carrier frequency for dramatic FM effects matching real Prophet-5
+        // At full Poly Mod, this gives ±4 octaves of frequency swing
         let fm_offset = if self.poly_mod_dest_freq_a {
-            poly_mod * bent_hz
+            poly_mod * bent_hz * 4.0
         } else {
             0.0
         };
 
-        // PW modulation from Poly Mod and Wheel Mod
-        if self.poly_mod_dest_pw_a {
-            let base_pw = 0.5;
-            self.osc_a.set_pulse_width((base_pw + poly_mod * 0.4).clamp(0.01, 0.99));
-        }
-        if self.wheel_mod_dest_pw_a {
-            let current = if self.poly_mod_dest_pw_a {
-                // Already set above, read it back approximately
-                (0.5 + poly_mod * 0.4).clamp(0.01, 0.99)
-            } else {
-                0.5
-            };
-            self.osc_a.set_pulse_width((current + wm * 0.3).clamp(0.01, 0.99));
-        }
-        if self.wheel_mod_dest_pw_b {
-            self.osc_b.set_pulse_width((0.5 + wm * 0.3).clamp(0.01, 0.99));
-        }
+        // Pulse width modulation — use actual PW knob values as base
+        let mut pw_a = self.osc_a_pw;
+        if self.poly_mod_dest_pw_a { pw_a += poly_mod * 0.4; }
+        if self.wheel_mod_dest_pw_a { pw_a += wm * 0.3; }
+        self.osc_a.set_pulse_width(pw_a.clamp(0.01, 0.99));
+
+        let mut pw_b = self.osc_b_pw;
+        if self.wheel_mod_dest_pw_b { pw_b += wm * 0.3; }
+        self.osc_b.set_pulse_width(pw_b.clamp(0.01, 0.99));
 
         // Process Osc B first (sync master + poly mod source)
         let osc_b_out = self.osc_b.process();
 
-        // Hard sync
+        // Hard sync: Osc B resets Osc A
         if self.sync_enabled && self.osc_b.wrapped() {
             self.osc_a.sync_reset();
         }
 
-        // Process Osc A with drift + FM + wheel mod
+        // Osc A frequency: base pitch + drift + wheel mod + FM
         self.osc_a.set_frequency(bent_hz + drift_a + wm_freq_a);
         let osc_a_out = self.osc_a.process_with_fm(fm_offset);
 
@@ -192,21 +220,22 @@ impl Voice {
             + osc_b_out * self.osc_b_level
             + noise_out * self.noise_level;
 
-        // Filter
-        let note_hz = tuning::note_to_hz(self.note);
-        let kbd_offset = (note_hz - 261.63) * self.filter_kbd_track;
+        // Filter — exponential keyboard tracking
+        let kbd_semitones = self.note as f32 - 60.0; // semitones from C4
+        let kbd_offset = kbd_semitones * self.filter_kbd_track * (self.filter_cutoff / 12.0);
         let poly_mod_filter = if self.poly_mod_dest_filter { poly_mod * 5000.0 } else { 0.0 };
         let cutoff = (self.filter_cutoff
-            + filter_env_val * self.filter_env_amount
+            + filter_env_val * self.filter_env_amount * vel_filter
             + poly_mod_filter
             + wm_filter
             + kbd_offset)
             .clamp(20.0, 20000.0);
         self.filter.set_cutoff(cutoff);
+        self.filter.set_drive(self.filter_drive);
         let filtered = self.filter.process(mixed);
 
-        // VCA
-        filtered * amp_env_val
+        // VCA — velocity scales amplitude
+        filtered * amp_env_val * vel_amp
     }
 }
 
@@ -392,5 +421,86 @@ mod tests {
         // End should be silent
         let tail = &buf[22050..];
         audio_test_harness::level::assert_silent(tail, 0.001);
+    }
+
+    #[test]
+    fn test_osc_b_octave_lower() {
+        // With Osc B one octave lower, it should add sub-octave weight
+        let mut v = Voice::new(44100.0, 0);
+        v.osc_a.set_saw(true);
+        v.osc_b.set_saw(true);
+        v.osc_a_level = 0.5;
+        v.osc_b_level = 1.0;
+        v.osc_b_semitones = -12.0; // one octave lower
+        v.filter_cutoff = 20000.0;
+        v.amp_env.set_attack(0.001);
+        v.amp_env.set_sustain(1.0);
+        v.note_on(69, 127); // A4
+        let buf = render_voice(&mut v, 0.5);
+        // Should detect fundamental at A3 (220Hz) since Osc B is louder
+        audio_test_harness::pitch::assert_pitch(&buf, 44100.0, 220.0, 10.0);
+    }
+
+    #[test]
+    fn test_osc_b_fine_detune_creates_beating() {
+        // Two oscillators with slight detune should produce beating
+        let mut v_detuned = Voice::new(44100.0, 0);
+        v_detuned.osc_a.set_saw(true);
+        v_detuned.osc_b.set_saw(true);
+        v_detuned.osc_a_level = 0.7;
+        v_detuned.osc_b_level = 0.7;
+        v_detuned.osc_b_fine = 10.0; // 10 cents sharp
+        v_detuned.filter_cutoff = 20000.0;
+        v_detuned.amp_env.set_attack(0.001);
+        v_detuned.amp_env.set_sustain(1.0);
+        v_detuned.note_on(69, 127);
+        let buf_detuned = render_voice(&mut v_detuned, 0.5);
+
+        // Compare to no detune
+        let mut v_unison = Voice::new(44100.0, 1);
+        v_unison.osc_a.set_saw(true);
+        v_unison.osc_b.set_saw(true);
+        v_unison.osc_a_level = 0.7;
+        v_unison.osc_b_level = 0.7;
+        v_unison.osc_b_fine = 0.0;
+        v_unison.filter_cutoff = 20000.0;
+        v_unison.amp_env.set_attack(0.001);
+        v_unison.amp_env.set_sustain(1.0);
+        v_unison.note_on(69, 127);
+        let buf_unison = render_voice(&mut v_unison, 0.5);
+
+        // Detuned should sound different (lower correlation)
+        let corr = audio_test_harness::correlation::cross_correlation(&buf_detuned, &buf_unison);
+        assert!(corr < 0.95, "10-cent detune should change the sound (corr={corr:.3})");
+    }
+
+    #[test]
+    fn test_velocity_affects_amplitude() {
+        let mut v_loud = Voice::new(44100.0, 0);
+        v_loud.osc_a.set_saw(true);
+        v_loud.osc_a_level = 1.0;
+        v_loud.filter_cutoff = 20000.0;
+        v_loud.amp_env.set_attack(0.001);
+        v_loud.amp_env.set_sustain(1.0);
+        v_loud.note_on(69, 127); // full velocity
+
+        let mut v_soft = Voice::new(44100.0, 1);
+        v_soft.osc_a.set_saw(true);
+        v_soft.osc_a_level = 1.0;
+        v_soft.filter_cutoff = 20000.0;
+        v_soft.amp_env.set_attack(0.001);
+        v_soft.amp_env.set_sustain(1.0);
+        v_soft.note_on(69, 40); // soft velocity
+
+        let buf_loud = render_voice(&mut v_loud, 0.2);
+        let buf_soft = render_voice(&mut v_soft, 0.2);
+
+        let rms_loud = audio_test_harness::level::rms(&buf_loud[441..]);
+        let rms_soft = audio_test_harness::level::rms(&buf_soft[441..]);
+
+        assert!(
+            rms_loud > rms_soft * 1.5,
+            "Loud ({rms_loud:.4}) should be louder than soft ({rms_soft:.4})"
+        );
     }
 }

@@ -27,6 +27,9 @@ pub struct ProphetSynth {
     // Pitch bend
     pub pitch_bend: f32, // -1 to +1
     pub pitch_bend_range: f32, // semitones (default 2)
+
+    // LFO initial amount — base modulation level even when mod wheel is at 0
+    pub lfo_initial_amount: f32, // 0.0-1.0
 }
 
 impl ProphetSynth {
@@ -50,19 +53,18 @@ impl ProphetSynth {
             wheel_mod_dest_filter: false,
             pitch_bend: 0.0,
             pitch_bend_range: 2.0,
+            lfo_initial_amount: 0.0,
         }
     }
 
     pub fn note_on(&mut self, note: u8, velocity: u8) {
         if self.unison {
             // All voices play the same note with symmetric detune
-            let detune_offsets = [0.0, 1.0, -1.0, 2.0, -2.0];
+            // Offsets only affect the base pitch — Osc B offset is applied separately in voice
+            let detune_offsets = [0.0f32, 1.0, -1.0, 2.0, -2.0];
             for (i, voice) in self.voices.iter_mut().enumerate() {
+                voice.unison_detune_hz = detune_offsets[i] * self.unison_detune;
                 voice.note_on(note, velocity);
-                // Apply detune offset to osc A frequency after note_on
-                let base_hz = crate::tuning::note_to_hz(note);
-                voice.osc_a.set_frequency(base_hz + detune_offsets[i] * self.unison_detune);
-                voice.osc_b.set_frequency(base_hz + detune_offsets[i] * self.unison_detune);
             }
             self.age_counter += 1;
             for age in &mut self.voice_ages {
@@ -73,6 +75,7 @@ impl ProphetSynth {
 
         // Normal polyphonic mode
         if let Some(idx) = self.find_voice_playing(note) {
+            self.voices[idx].unison_detune_hz = 0.0;
             self.voices[idx].note_on(note, velocity);
             self.age_counter += 1;
             self.voice_ages[idx] = self.age_counter;
@@ -81,6 +84,7 @@ impl ProphetSynth {
 
         let idx = self.find_free_voice()
             .unwrap_or_else(|| self.steal_oldest_voice());
+        self.voices[idx].unison_detune_hz = 0.0;
         self.voices[idx].note_on(note, velocity);
         self.age_counter += 1;
         self.voice_ages[idx] = self.age_counter;
@@ -98,11 +102,13 @@ impl ProphetSynth {
         // Global LFO (computed once, shared by all voices)
         let lfo_val = self.lfo.process();
 
-        // Wheel Mod: mix LFO and noise, attenuate by mod wheel
+        // Wheel Mod: mix LFO and noise, scale by (initial_amount + mod_wheel)
+        // initial_amount provides always-on modulation, mod_wheel adds on top
         let noise_val = self.noise.white();
         let wheel_source = lfo_val * (1.0 - self.wheel_mod_source_mix)
             + noise_val * self.wheel_mod_source_mix;
-        let wheel_mod_signal = wheel_source * self.mod_wheel;
+        let mod_depth = (self.lfo_initial_amount + self.mod_wheel).min(1.0);
+        let wheel_mod_signal = wheel_source * mod_depth;
 
         // Pitch bend in semitones
         let bend_semitones = self.pitch_bend * self.pitch_bend_range;

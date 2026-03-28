@@ -4,6 +4,7 @@ pub struct LadderFilter {
     s: [f32; 4],       // 4 integrator states
     cutoff_hz: f32,
     resonance: f32,    // 0.0 to ~4.0
+    drive: f32,        // 1.0 = clean, higher = more saturation
     sample_rate: f32,
 }
 
@@ -13,6 +14,7 @@ impl LadderFilter {
             s: [0.0; 4],
             cutoff_hz: 20000.0,
             resonance: 0.0,
+            drive: 1.0,
             sample_rate,
         }
     }
@@ -23,6 +25,10 @@ impl LadderFilter {
 
     pub fn set_resonance(&mut self, r: f32) {
         self.resonance = r.clamp(0.0, 4.0);
+    }
+
+    pub fn set_drive(&mut self, d: f32) {
+        self.drive = d.max(0.1);
     }
 
     pub fn process(&mut self, input: f32) -> f32 {
@@ -50,7 +56,7 @@ impl LadderFilter {
         for i in 0..4 {
             // SSM2040-style saturation at each stage input
             // Scale so normal signal levels are mostly linear
-            x = ssm2040_saturate(x);
+            x = ssm2040_saturate(x, self.drive);
 
             let v = (x - self.s[i]) * a;
             let y = v + self.s[i];
@@ -64,12 +70,12 @@ impl LadderFilter {
 
 /// SSM2040-style soft saturation with slight asymmetry.
 /// Scaled so signals in [-1, 1] pass mostly unchanged, larger signals compress.
-fn ssm2040_saturate(x: f32) -> f32 {
-    // Soft saturation: nearly linear at unity, compresses at high levels.
-    // tanh(1/5)*5 = 0.197*5 = 0.985 → through 4 stages: 0.985^4 = 0.94
-    // This provides enough nonlinearity for self-oscillation stability
-    // while keeping passband gain close to unity.
-    (x * 0.2).tanh() * 5.0
+fn ssm2040_saturate(x: f32, drive: f32) -> f32 {
+    // Drive scales the input into the tanh curve earlier.
+    // drive=1.0: clean (same as before). drive=2.0+: more grit.
+    let scale = 0.2 * drive;
+    let inv = 1.0 / scale;
+    (x * scale).tanh() * inv
 }
 
 #[cfg(test)]

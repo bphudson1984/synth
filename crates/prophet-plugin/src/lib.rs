@@ -1,6 +1,9 @@
 use nih_plug::prelude::*;
 use nih_plug_egui::{create_egui_editor, egui, EguiState};
 use prophet_dsp::synth::ProphetSynth;
+use prophet_dsp::effects::chorus::StereoChorus;
+use prophet_dsp::effects::delay::TapeDelay;
+use prophet_dsp::effects::reverb::PlateReverb;
 use std::sync::Arc;
 
 mod gui;
@@ -9,6 +12,9 @@ pub mod presets;
 pub struct ProphetPlugin {
     params: Arc<ProphetParams>,
     synth: ProphetSynth,
+    chorus: StereoChorus,
+    delay: TapeDelay,
+    reverb: PlateReverb,
 }
 
 #[derive(Params)]
@@ -83,6 +89,17 @@ pub struct ProphetParams {
     #[id = "osc_b_pw"]
     pub osc_b_pw: FloatParam,
 
+    // Osc B pitch offset
+    #[id = "osc_b_semi"]
+    pub osc_b_semitones: FloatParam,
+
+    #[id = "osc_b_fine"]
+    pub osc_b_fine: FloatParam,
+
+    // Filter drive
+    #[id = "flt_drive"]
+    pub filter_drive: FloatParam,
+
     // Hard sync
     #[id = "sync"]
     pub sync: BoolParam,
@@ -115,6 +132,10 @@ pub struct ProphetParams {
 
     #[id = "lfo_square"]
     pub lfo_square: BoolParam,
+
+    // LFO initial amount — always-on modulation depth
+    #[id = "lfo_amt"]
+    pub lfo_initial_amount: FloatParam,
 
     // Wheel Mod
     #[id = "wm_mix"]
@@ -149,6 +170,32 @@ pub struct ProphetParams {
     // Drift
     #[id = "drift"]
     pub drift: FloatParam,
+
+    // Effects — Chorus
+    #[id = "ch_rate"]
+    pub chorus_rate: FloatParam,
+    #[id = "ch_depth"]
+    pub chorus_depth: FloatParam,
+    #[id = "ch_mix"]
+    pub chorus_mix: FloatParam,
+
+    // Effects — Delay
+    #[id = "dl_time"]
+    pub delay_time: FloatParam,
+    #[id = "dl_fb"]
+    pub delay_feedback: FloatParam,
+    #[id = "dl_tone"]
+    pub delay_tone: FloatParam,
+    #[id = "dl_mix"]
+    pub delay_mix: FloatParam,
+
+    // Effects — Reverb
+    #[id = "rv_decay"]
+    pub reverb_decay: FloatParam,
+    #[id = "rv_damp"]
+    pub reverb_damping: FloatParam,
+    #[id = "rv_mix"]
+    pub reverb_mix: FloatParam,
 }
 
 impl Default for ProphetPlugin {
@@ -156,6 +203,9 @@ impl Default for ProphetPlugin {
         Self {
             params: Arc::new(ProphetParams::default()),
             synth: ProphetSynth::new(44100.0),
+            chorus: StereoChorus::new(44100.0),
+            delay: TapeDelay::new(44100.0),
+            reverb: PlateReverb::new(44100.0),
         }
     }
 }
@@ -169,7 +219,7 @@ impl Default for ProphetParams {
         };
 
         Self {
-            editor_state: EguiState::from_size(1600, 320),
+            editor_state: EguiState::from_size(1600, 440),
 
             filter_cutoff: FloatParam::new(
                 "Filter Cutoff",
@@ -268,6 +318,24 @@ impl Default for ProphetParams {
                 FloatRange::Linear { min: 0.01, max: 0.99 },
             ),
 
+            osc_b_semitones: FloatParam::new(
+                "Osc B Semitones",
+                0.0,
+                FloatRange::Linear { min: -24.0, max: 24.0 },
+            )
+            .with_step_size(1.0),
+            osc_b_fine: FloatParam::new(
+                "Osc B Fine",
+                0.0,
+                FloatRange::Linear { min: -100.0, max: 100.0 },
+            )
+            .with_unit(" cents"),
+            filter_drive: FloatParam::new(
+                "Filter Drive",
+                1.0,
+                FloatRange::Linear { min: 0.5, max: 5.0 },
+            ),
+
             sync: BoolParam::new("Sync", false),
 
             poly_mod_filt_env: FloatParam::new(
@@ -293,6 +361,12 @@ impl Default for ProphetParams {
             lfo_tri: BoolParam::new("LFO Triangle", true),
             lfo_saw: BoolParam::new("LFO Saw", false),
             lfo_square: BoolParam::new("LFO Square", false),
+
+            lfo_initial_amount: FloatParam::new(
+                "LFO Amount",
+                0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 },
+            ),
 
             wheel_mod_mix: FloatParam::new(
                 "WheelMod Mix",
@@ -321,6 +395,34 @@ impl Default for ProphetParams {
                 FloatRange::Linear { min: 0.0, max: 10.0 },
             )
             .with_unit(" Hz"),
+
+            // Chorus
+            chorus_rate: FloatParam::new("Chorus Rate", 0.8,
+                FloatRange::Skewed { min: 0.1, max: 5.0, factor: FloatRange::skew_factor(-1.0) })
+                .with_unit(" Hz"),
+            chorus_depth: FloatParam::new("Chorus Depth", 0.5,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
+            chorus_mix: FloatParam::new("Chorus Mix", 0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
+
+            // Delay
+            delay_time: FloatParam::new("Delay Time", 375.0,
+                FloatRange::Skewed { min: 1.0, max: 2000.0, factor: FloatRange::skew_factor(-1.5) })
+                .with_unit(" ms"),
+            delay_feedback: FloatParam::new("Delay Feedback", 0.4,
+                FloatRange::Linear { min: 0.0, max: 0.95 }),
+            delay_tone: FloatParam::new("Delay Tone", 0.6,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
+            delay_mix: FloatParam::new("Delay Mix", 0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
+
+            // Reverb
+            reverb_decay: FloatParam::new("Reverb Decay", 0.7,
+                FloatRange::Linear { min: 0.0, max: 0.99 }),
+            reverb_damping: FloatParam::new("Reverb Damp", 0.7,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
+            reverb_mix: FloatParam::new("Reverb Mix", 0.0,
+                FloatRange::Linear { min: 0.0, max: 1.0 }),
         }
     }
 }
@@ -335,7 +437,7 @@ impl Plugin for ProphetPlugin {
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
         AudioIOLayout {
             main_input_channels: None,
-            main_output_channels: NonZeroU32::new(1), // Mono
+            main_output_channels: NonZeroU32::new(2), // Stereo
             ..AudioIOLayout::const_default()
         },
     ];
@@ -356,7 +458,11 @@ impl Plugin for ProphetPlugin {
         buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        self.synth = ProphetSynth::new(buffer_config.sample_rate);
+        let sr = buffer_config.sample_rate;
+        self.synth = ProphetSynth::new(sr);
+        self.chorus = StereoChorus::new(sr);
+        self.delay = TapeDelay::new(sr);
+        self.reverb = PlateReverb::new(sr);
         true
     }
 
@@ -423,20 +529,26 @@ impl Plugin for ProphetPlugin {
             let pm_pw_a = self.params.poly_mod_pw_a.value();
             let pm_filter = self.params.poly_mod_filter.value();
 
+            let osc_b_semi = self.params.osc_b_semitones.smoothed.next();
+            let osc_b_fine_val = self.params.osc_b_fine.smoothed.next();
+            let flt_drive = self.params.filter_drive.smoothed.next();
+
             self.synth.for_each_voice(|v| {
                 v.osc_a.set_saw(osc_a_saw);
                 v.osc_a.set_pulse(osc_a_pulse);
-                v.osc_a.set_pulse_width(osc_a_pw);
                 v.osc_b.set_saw(osc_b_saw);
                 v.osc_b.set_tri(osc_b_tri);
                 v.osc_b.set_pulse(osc_b_pulse);
-                v.osc_b.set_pulse_width(osc_b_pw);
+                // PW set on voice, not directly on oscillator (voice handles modulation)
+                v.osc_a_pw = osc_a_pw;
+                v.osc_b_pw = osc_b_pw;
                 v.osc_a_level = osc_a_level;
                 v.osc_b_level = osc_b_level;
                 v.noise_level = noise_level;
                 v.filter_cutoff = cutoff;
                 v.filter_env_amount = filter_env_amount;
                 v.filter.set_resonance(resonance * 4.0);
+                v.filter_drive = flt_drive;
                 v.filter_env.set_attack(f_attack);
                 v.filter_env.set_decay(f_decay);
                 v.filter_env.set_sustain(f_sustain);
@@ -446,6 +558,8 @@ impl Plugin for ProphetPlugin {
                 v.amp_env.set_sustain(a_sustain);
                 v.amp_env.set_release(a_release);
                 v.sync_enabled = sync;
+                v.osc_b_semitones = osc_b_semi;
+                v.osc_b_fine = osc_b_fine_val;
                 v.poly_mod_filt_env_amt = pm_filt_env;
                 v.poly_mod_osc_b_amt = pm_osc_b;
                 v.poly_mod_dest_freq_a = pm_freq_a;
@@ -464,6 +578,7 @@ impl Plugin for ProphetPlugin {
 
             // Wheel Mod config
             self.synth.wheel_mod_source_mix = self.params.wheel_mod_mix.smoothed.next();
+            self.synth.lfo_initial_amount = self.params.lfo_initial_amount.smoothed.next();
             self.synth.wheel_mod_dest_freq_a = self.params.wheel_mod_freq_a.value();
             self.synth.wheel_mod_dest_freq_b = self.params.wheel_mod_freq_b.value();
             self.synth.wheel_mod_dest_pw_a = self.params.wheel_mod_pw_a.value();
@@ -502,12 +617,31 @@ impl Plugin for ProphetPlugin {
             }
 
             // Generate audio
-            let output = self.synth.process();
+            let dry = self.synth.process();
+
+            // Effect parameters
+            self.chorus.rate = self.params.chorus_rate.smoothed.next();
+            self.chorus.depth = self.params.chorus_depth.smoothed.next();
+            self.chorus.mix = self.params.chorus_mix.smoothed.next();
+            self.delay.time_ms = self.params.delay_time.smoothed.next();
+            self.delay.feedback = self.params.delay_feedback.smoothed.next();
+            self.delay.tone = self.params.delay_tone.smoothed.next();
+            self.delay.mix = self.params.delay_mix.smoothed.next();
+            self.reverb.decay = self.params.reverb_decay.smoothed.next();
+            self.reverb.damping = self.params.reverb_damping.smoothed.next();
+            self.reverb.mix = self.params.reverb_mix.smoothed.next();
+
+            // Effects chain: mono → chorus (stereo) → delay → reverb
+            let (ch_l, ch_r) = self.chorus.process(dry);
+            let (dl_l, dl_r) = self.delay.process(ch_l, ch_r);
+            let (rv_l, rv_r) = self.reverb.process_stereo(dl_l, dl_r);
+
             let gain = util::db_to_gain_fast(volume_db);
 
-            for sample in channel_samples {
-                *sample = output * gain;
-            }
+            // Write stereo output
+            let mut ch_iter = channel_samples.into_iter();
+            if let Some(l) = ch_iter.next() { *l = rv_l * gain; }
+            if let Some(r) = ch_iter.next() { *r = rv_r * gain; }
         }
 
         ProcessStatus::KeepAlive
