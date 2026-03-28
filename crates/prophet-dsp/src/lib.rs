@@ -9,3 +9,4 @@ pub mod synth;
 pub mod drift;
 pub mod glide;
 pub mod effects;
+pub mod arpeggiator;
