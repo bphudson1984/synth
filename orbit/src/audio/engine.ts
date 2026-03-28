@@ -8,8 +8,8 @@ export class OrbitEngine {
 
     async init(): Promise<void> {
         const ctx = new AudioContext({ sampleRate: 48000 });
-        const wasmModule = await WebAssembly.compileStreaming(fetch('/tr808.wasm'));
-        await ctx.audioWorklet.addModule('/worklet-processor.js');
+        const wasmModule = await WebAssembly.compileStreaming(fetch(import.meta.env.BASE_URL + 'tr808.wasm'));
+        await ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'worklet-processor.js');
 
         this.node = new AudioWorkletNode(ctx, 'tr808-processor', {
             outputChannelCount: [2],

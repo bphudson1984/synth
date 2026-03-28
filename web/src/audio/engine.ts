@@ -10,7 +10,7 @@ export class AudioEngine {
 
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)
-        const wasmResponse = await fetch('/prophet-dsp.wasm');
+        const wasmResponse = await fetch(import.meta.env.BASE_URL + 'prophet-dsp.wasm');
         const wasmBytes = await wasmResponse.arrayBuffer();
 
         // Load worklet processor
