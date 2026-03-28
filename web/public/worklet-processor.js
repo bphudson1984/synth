@@ -8,12 +8,14 @@ class ProphetProcessor extends AudioWorkletProcessor {
 
     handleMessage(data) {
         switch (data.type) {
-            case 'wasm-module':
-                WebAssembly.instantiate(data.module, {}).then(instance => {
-                    this.wasm = instance.exports;
+            case 'wasm-bytes':
+                WebAssembly.instantiate(data.bytes, {}).then(result => {
+                    this.wasm = result.instance.exports;
                     this.wasm.init(sampleRate);
                     this.ready = true;
                     this.port.postMessage({ type: 'ready' });
+                }).catch(err => {
+                    this.port.postMessage({ type: 'error', message: err.message });
                 });
                 break;
             case 'note-on':
