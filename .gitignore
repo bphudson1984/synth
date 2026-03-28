@@ -20,3 +20,6 @@ web/node_modules/
 web-808/node_modules/
 orbit/dist/
 orbit/node_modules/
+
+# WASM build artifacts (rebuilt from source)
+**/*.wasm
