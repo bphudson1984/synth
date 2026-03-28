@@ -8,3 +8,4 @@ pub mod rimshot;
 pub mod clave;
 pub mod maracas;
 pub mod engine;
+pub mod sequencer;

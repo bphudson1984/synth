@@ -14,5 +14,9 @@ infra/terraform.tfvars
 infra/.terraform.lock.hcl
 
 # Web build output
+dist/
 web/dist/
 web/node_modules/
+web-808/node_modules/
+orbit/dist/
+orbit/node_modules/

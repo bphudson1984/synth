@@ -10,11 +10,11 @@ export class AudioEngine {
 
         // Compile WASM module on main thread
         const wasmModule = await WebAssembly.compileStreaming(
-            fetch('/prophet-dsp.wasm')
+            fetch(import.meta.env.BASE_URL + 'prophet-dsp.wasm')
         );
 
         // Load worklet processor
-        await this.ctx.audioWorklet.addModule('/worklet-processor.js');
+        await this.ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'worklet-processor.js');
 
         // Create node with stereo output
         this.node = new AudioWorkletNode(this.ctx, 'prophet-processor', {

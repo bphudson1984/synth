@@ -1,6 +1,9 @@
 use tr808_dsp::engine::{TR808, Voice};
+use tr808_dsp::sequencer::{Sequencer, SeqEvent};
 
 static mut ENGINE: Option<TR808> = None;
+static mut SEQ: Option<Sequencer> = None;
+static mut SEQ_EVENTS: Vec<SeqEvent> = Vec::new();
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
 static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
@@ -8,6 +11,8 @@ static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 pub extern "C" fn init(sample_rate: f32) {
     unsafe {
         ENGINE = Some(TR808::new(sample_rate));
+        SEQ = Some(Sequencer::new(sample_rate));
+        SEQ_EVENTS = Vec::with_capacity(16);
     }
 }
 
@@ -15,8 +20,16 @@ pub extern "C" fn init(sample_rate: f32) {
 pub extern "C" fn process(num_samples: u32) {
     unsafe {
         let engine = ENGINE.as_mut().unwrap();
+        let seq = SEQ.as_mut().unwrap();
         let n = (num_samples as usize).min(256);
         for i in 0..n {
+            // Sequencer fires triggers into the engine
+            seq.process(&mut SEQ_EVENTS);
+            for ev in &SEQ_EVENTS {
+                if let Some(voice) = Voice::from_u8(ev.voice) {
+                    engine.trigger(voice);
+                }
+            }
             let mono = engine.process();
             LEFT_BUF[i] = mono;
             RIGHT_BUF[i] = mono;
@@ -88,4 +101,76 @@ pub extern "C" fn set_param(voice_id: u8, param_id: u8, value: f32) {
             _ => {}
         }
     }
+}
+
+// Sequencer controls
+#[no_mangle]
+pub extern "C" fn seq_play() {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.play(); } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_stop() {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.stop(); } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_bpm(bpm: f32) {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_bpm(bpm); } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_swing(swing: f32) {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.swing = swing; } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_toggle_step(track: u8, step: u8) {
+    unsafe {
+        if let Some(seq) = SEQ.as_mut() {
+            seq.toggle_step(track as usize, step as usize);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_step(track: u8, step: u8, active: u8) {
+    unsafe {
+        if let Some(seq) = SEQ.as_mut() {
+            seq.set_step(track as usize, step as usize, active != 0);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_get_step(track: u8, step: u8) -> u8 {
+    unsafe {
+        if let Some(seq) = SEQ.as_ref() {
+            if seq.get_step(track as usize, step as usize) { 1 } else { 0 }
+        } else { 0 }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_get_current_step() -> u8 {
+    unsafe {
+        if let Some(seq) = SEQ.as_ref() { seq.current_step() as u8 } else { 0 }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_is_playing() -> u8 {
+    unsafe {
+        if let Some(seq) = SEQ.as_ref() { if seq.is_playing() { 1 } else { 0 } } else { 0 }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_clear() {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.clear(); } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_length(length: u8) {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_length(length as usize); } }
 }
