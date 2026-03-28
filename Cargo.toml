@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "crates/audio-test-harness",
+    "crates/prophet-dsp",
+    "crates/prophet-plugin",
+    "xtask",
+]
+resolver = "2"

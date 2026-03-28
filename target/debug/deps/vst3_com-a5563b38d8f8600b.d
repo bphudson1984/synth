@@ -1,0 +1,12 @@
+/home/sonofchunga/projects/synth/target/debug/deps/vst3_com-a5563b38d8f8600b.d: /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/lib.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/ptr.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/mod.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/iunknown.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/offset.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/sys.rs
+
+/home/sonofchunga/projects/synth/target/debug/deps/libvst3_com-a5563b38d8f8600b.rlib: /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/lib.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/ptr.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/mod.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/iunknown.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/offset.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/sys.rs
+
+/home/sonofchunga/projects/synth/target/debug/deps/libvst3_com-a5563b38d8f8600b.rmeta: /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/lib.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/ptr.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/mod.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/iunknown.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/offset.rs /home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/sys.rs
+
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/lib.rs:
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/ptr.rs:
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/mod.rs:
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/interfaces/iunknown.rs:
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/offset.rs:
+/home/sonofchunga/.cargo/git/checkouts/vst3-sys-7c1833a33d74d639/b3ff4d7/com/src/sys.rs:

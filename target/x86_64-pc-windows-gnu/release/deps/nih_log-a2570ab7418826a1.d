@@ -1,0 +1,11 @@
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/nih_log-a2570ab7418826a1.d: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/builder.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/logger.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target/windbg.rs
+
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/libnih_log-a2570ab7418826a1.rlib: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/builder.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/logger.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target/windbg.rs
+
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/libnih_log-a2570ab7418826a1.rmeta: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/builder.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/logger.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target/windbg.rs
+
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/lib.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/builder.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/logger.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nih_log-0.3.1/src/target/windbg.rs:

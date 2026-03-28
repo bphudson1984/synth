@@ -1,0 +1,7 @@
+[package]
+name = "prophet-dsp"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+audio-test-harness = { path = "../audio-test-harness" }

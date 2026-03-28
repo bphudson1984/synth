@@ -1,0 +1,14 @@
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/serde-3959d5758f872d30.d: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/build/serde-0793d51d23e91261/out/private.rs
+
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/libserde-3959d5758f872d30.rlib: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/build/serde-0793d51d23e91261/out/private.rs
+
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/deps/libserde-3959d5758f872d30.rmeta: /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/build/serde-0793d51d23e91261/out/private.rs
+
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/sonofchunga/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/build/serde-0793d51d23e91261/out/private.rs:
+
+# env-dep:OUT_DIR=/home/sonofchunga/projects/synth/target/x86_64-pc-windows-gnu/release/build/serde-0793d51d23e91261/out
