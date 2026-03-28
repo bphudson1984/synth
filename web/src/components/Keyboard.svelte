@@ -14,7 +14,7 @@
     const BLACK_W = 14;
     const BLACK_H = 50;
 
-    let activeNotes = new Set<number>();
+    let activeNotes = $state(new Set<number>());
 
     function isBlack(noteInOctave: number): boolean {
         return [1, 3, 6, 8, 10].includes(noteInOctave);
@@ -50,14 +50,12 @@
     function onDown(note: number) {
         if (!activeNotes.has(note)) {
             activeNotes.add(note);
-            activeNotes = activeNotes;
             onnoteon?.(new CustomEvent('noteon', { detail: { note, velocity: 100 } }));
         }
     }
 
     function onUp(note: number) {
         activeNotes.delete(note);
-        activeNotes = activeNotes;
         onnoteoff?.(new CustomEvent('noteoff', { detail: { note } }));
     }
 

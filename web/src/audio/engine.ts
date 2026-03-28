@@ -8,10 +8,10 @@ export class AudioEngine {
     async init(): Promise<void> {
         this.ctx = new AudioContext({ sampleRate: 48000 });
 
-        // Compile WASM module on main thread
-        const wasmModule = await WebAssembly.compileStreaming(
-            fetch(import.meta.env.BASE_URL + 'prophet-dsp.wasm')
-        );
+        // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
+        // unlike WebAssembly.Module which Chrome silently drops during postMessage)
+        const wasmResponse = await fetch('/prophet-dsp.wasm');
+        const wasmBytes = await wasmResponse.arrayBuffer();
 
         // Load worklet processor
         await this.ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'worklet-processor.js');
@@ -23,15 +23,27 @@ export class AudioEngine {
         });
 
         // Wait for WASM to initialize in the worklet
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('AudioWorklet WASM initialization timed out'));
+            }, 10000);
+
             this.node!.port.onmessage = (e) => {
                 if (e.data.type === 'ready') {
+                    clearTimeout(timeout);
                     this._ready = true;
                     resolve();
+                } else if (e.data.type === 'error') {
+                    clearTimeout(timeout);
+                    reject(new Error(e.data.message ?? 'Worklet initialization failed: unknown error'));
                 }
             };
-            // Send the compiled module to the worklet
-            this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });
+
+            // Transfer the WASM bytes to the worklet (zero-copy via transferable)
+            this.node!.port.postMessage(
+                { type: 'wasm-bytes', bytes: wasmBytes },
+                [wasmBytes]
+            );
         });
 
         this.node.connect(this.ctx.destination);
