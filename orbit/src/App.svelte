@@ -12,13 +12,18 @@
 
     async function start() {
         loading = true;
-        const drumEngine = new OrbitEngine();
-        const padEngine = new ProphetEngine();
-        await Promise.all([drumEngine.init(), padEngine.init()]);
-        setDrumEngine(drumEngine);
-        setPadEngine(padEngine);
-        started = true;
-        loading = false;
+        try {
+            const drumEngine = new OrbitEngine();
+            const padEngine = new ProphetEngine();
+            await Promise.all([drumEngine.init(), padEngine.init()]);
+            setDrumEngine(drumEngine);
+            setPadEngine(padEngine);
+            started = true;
+        } catch (err) {
+            console.error('Engine initialization failed:', err);
+        } finally {
+            loading = false;
+        }
     }
 </script>
 
