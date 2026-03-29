@@ -3,6 +3,7 @@ import { getAudioContext } from '../../shared/audio/context';
 
 export class OrbitEngine {
     private node: AudioWorkletNode | null = null;
+    private panner: StereoPannerNode | null = null;
     private _ready = false;
     get ready() { return this._ready; }
     onStep: ((step: number) => void) | null = null;
@@ -31,8 +32,12 @@ export class OrbitEngine {
             };
             this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });
         });
-        this.node.connect(ctx.destination);
+        this.panner = ctx.createStereoPanner();
+        this.node.connect(this.panner);
+        this.panner.connect(ctx.destination);
     }
+
+    setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
 
     triggerVoice(orbitIndex: number, engine: EngineType = '808') {
         const voiceId = getEngineVoiceId(orbitIndex, engine);
@@ -69,5 +74,9 @@ export class OrbitEngine {
 
     setAllEngines(engine: EngineType) {
         this.node?.port.postMessage({ type: 'set-all-engines', is909: engine === '909' });
+    }
+
+    setMasterVolume(value: number) {
+        this.node?.port.postMessage({ type: 'set-param', voice: 255, param: 0, value });
     }
 }

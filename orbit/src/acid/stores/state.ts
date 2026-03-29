@@ -4,12 +4,14 @@ import type { AcidEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import { PRESETS } from '../presets';
 import { bpm, registerEngine } from '../../shared/stores/transport';
+import { registerMixerCallback } from '../../shared/stores/mixer';
 
 let engine: AcidEngine | null = null;
 export function setAcidEngine(e: AcidEngine) {
     engine = e;
     e.onStep = (step) => currentStep.set(step);
     bpm.subscribe((value) => { engine?.seqSetBpm(value); });
+    registerMixerCallback('acid', (gain) => { engine?.setParam(PARAM.VOLUME, gain); }, (pan) => { engine?.setPan(pan); });
     registerEngine({
         play: () => { engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
         stop: () => { engine?.seqStop(); currentStep.set(0); },
