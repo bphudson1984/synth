@@ -44,6 +44,7 @@ Use CSS custom properties for all surfaces so the UI adapts to light/dark mode:
 ```css
 --orbit-surface:    var(--color-background-primary);    /* card/panel bg */
 --orbit-well:       var(--color-background-secondary);   /* recessed areas, tracks */
+--orbit-well-bright: #262626;                            /* playhead highlight on recessed areas */
 --orbit-canvas:     var(--color-background-tertiary);    /* page bg */
 --orbit-ink:        var(--color-text-primary);           /* primary text, icons */
 --orbit-label:      var(--color-text-secondary);         /* secondary labels */
@@ -196,7 +197,19 @@ Grid padding:       16px horizontal
 |------------|-------------------------|-------------------------------------|
 | Off        | `var(--orbit-well)`     | `0.5px solid var(--orbit-border)`   |
 | On         | Current voice colour    | None                                |
-| Playhead   | Add a `2px` bottom border in `var(--orbit-ink)` to whichever step is currently playing |
+
+#### Playhead (current step highlight)
+
+The currently playing step receives a prominent highlight so the user can always see where the playhead is in the sequence. The highlight combines a **ring**, an optional **glow**, and a **bottom bar**.
+
+| Sub-state          | Background                  | Ring (box-shadow outline)                  | Glow                                          | Bottom bar                           |
+|--------------------|-----------------------------|--------------------------------------------|-----------------------------------------------|--------------------------------------|
+| Playhead + Off     | `var(--orbit-well-bright)` (`#262626`) | `1.5px` ring via `box-shadow` in `var(--orbit-ink)`             | None                                          | `2px` bottom bar in `var(--orbit-ink)` |
+| Playhead + On      | Current voice colour        | `0 0 0 1.5px var(--orbit-ink)`             | `0 0 10px` in voice colour (radiates outward) | `2px` bottom bar in `var(--orbit-ink)` |
+
+- The ring and glow use `box-shadow` (never `outline`, which doesn't follow `border-radius`).
+- Playhead advance is **instant** (0ms) — no transition on the ring or glow.
+- The bottom bar is rendered via a `::after` pseudo-element, same as before.
 
 - Tapping a step toggles it on/off for the selected voice.
 - The sequencer always shows the pattern for whichever voice pad is currently selected.

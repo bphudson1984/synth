@@ -10,7 +10,7 @@
     $: playing = $isPlaying;
 </script>
 
-<div class="sequencer">
+<div class="sequencer" style="--step-colour: {colour}">
     <div class="grid">
         {#each Array(NUM_STEPS) as _, i}
             <button
@@ -43,6 +43,15 @@
     }
     .step:active { transform: scale(0.95); }
     .step.active { border: none; }
+    .step.playhead {
+        box-shadow: 0 0 0 1.5px var(--orbit-ink, #eee);
+    }
+    .step.playhead:not(.active) {
+        background: var(--orbit-well-bright, #262626);
+    }
+    .step.playhead.active {
+        box-shadow: 0 0 0 1.5px var(--orbit-ink, #eee), 0 0 10px var(--step-colour);
+    }
     .step.playhead::after {
         content: '';
         position: absolute;
