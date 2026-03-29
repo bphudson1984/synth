@@ -3,6 +3,7 @@ class TR808Processor extends AudioWorkletProcessor {
         super();
         this.wasm = null;
         this.ready = false;
+        this.lastStep = -1;
         this.port.onmessage = (e) => this.handleMessage(e.data);
     }
 
@@ -43,6 +44,12 @@ class TR808Processor extends AudioWorkletProcessor {
         const rp = this.wasm.get_right_ptr() / 4;
         output[0].set(memory.subarray(lp, lp + n));
         if (output[1]) output[1].set(memory.subarray(rp, rp + n));
+
+        const step = this.wasm.seq_get_current_step();
+        if (step !== this.lastStep) {
+            this.lastStep = step;
+            this.port.postMessage({ type: 'step', step });
+        }
         return true;
     }
 }

@@ -298,6 +298,12 @@
                 status.textContent = '';
                 document.getElementById('machine').classList.add('active');
 
+                node.port.onmessage = (e) => {
+                    if (e.data.type === 'step') {
+                        highlightStep(e.data.step);
+                    }
+                };
+
                 // MIDI
                 if (navigator.requestMIDIAccess) {
                     try {
@@ -358,7 +364,29 @@
         const VOICE_NAMES = ['BD','SD','LT','MT','HT','RS','CP','CH','OH','CY','CB','MA','CL'];
         const VOICE_COLORS = ['#d32f2f','#f57c00','#fbc02d','#fbc02d','#fbc02d','#7b1fa2','#e91e63','#00897b','#00897b','#1565c0','#ff6f00','#558b2f','#4e342e'];
         let playing = false;
+        let currentHighlightStep = -1;
         const stepState = Array.from({length: 13}, () => Array(16).fill(false));
+
+        function highlightStep(step) {
+            if (currentHighlightStep >= 0) {
+                for (let t = 0; t < 13; t++) {
+                    document.getElementById(`step-${t}-${currentHighlightStep}`)?.classList.remove('current');
+                }
+            }
+            currentHighlightStep = step;
+            for (let t = 0; t < 13; t++) {
+                document.getElementById(`step-${t}-${step}`)?.classList.add('current');
+            }
+        }
+
+        function clearHighlight() {
+            if (currentHighlightStep >= 0) {
+                for (let t = 0; t < 13; t++) {
+                    document.getElementById(`step-${t}-${currentHighlightStep}`)?.classList.remove('current');
+                }
+                currentHighlightStep = -1;
+            }
+        }
 
         function buildGrid() {
             const grid = document.getElementById('step-grid');
@@ -404,6 +432,7 @@
             node.port.postMessage({ type: playing ? 'seq-play' : 'seq-stop' });
             document.getElementById('play-btn').classList.toggle('playing', playing);
             document.getElementById('play-btn').innerHTML = playing ? '&#9724; STOP' : '&#9654; PLAY';
+            if (!playing) clearHighlight();
         }
 
         function setBpm(val) {
