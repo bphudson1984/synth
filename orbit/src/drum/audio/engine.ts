@@ -14,7 +14,9 @@ export class OrbitEngine {
         if (!wasmResponse.ok) {
             throw new Error(`Failed to fetch tr808.wasm: ${wasmResponse.status} ${wasmResponse.statusText}`);
         }
-        const wasmModule = await WebAssembly.compile(await wasmResponse.arrayBuffer());
+        // Send raw bytes instead of compiled WebAssembly.Module — Chrome silently
+        // drops Module objects posted to AudioWorklet threads, causing init to hang.
+        const wasmBytes = await wasmResponse.arrayBuffer();
         this.node = new AudioWorkletNode(ctx, 'tr808-processor', {
             outputChannelCount: [2], numberOfOutputs: 1,
         });
@@ -34,7 +36,10 @@ export class OrbitEngine {
                 }
                 if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
-            this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });
+            this.node!.port.postMessage(
+                { type: 'wasm-bytes', bytes: wasmBytes },
+                [wasmBytes]
+            );
         });
         this.panner = ctx.createStereoPanner();
         this.node.connect(this.panner);

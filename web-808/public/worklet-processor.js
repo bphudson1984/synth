@@ -8,7 +8,18 @@ class TR808Processor extends AudioWorkletProcessor {
     }
 
     handleMessage(data) {
-        if (data.type === 'wasm-module') {
+        if (data.type === 'wasm-bytes') {
+            // Compile + instantiate from raw bytes (works in all browsers)
+            WebAssembly.instantiate(data.bytes, {}).then(result => {
+                this.wasm = result.instance.exports;
+                this.wasm.init(sampleRate);
+                this.ready = true;
+                this.port.postMessage({ type: 'ready' });
+            }).catch(err => {
+                this.port.postMessage({ type: 'error', message: err.message });
+            });
+        } else if (data.type === 'wasm-module') {
+            // Legacy path: pre-compiled module (may fail in Chrome AudioWorklet)
             WebAssembly.instantiate(data.module, {}).then(instance => {
                 this.wasm = instance.exports;
                 this.wasm.init(sampleRate);
