@@ -54,9 +54,10 @@ jobs:
 
       - name: Build WASM
         run: |
-          cargo build -p tr808-wasm -p prophet-wasm --target wasm32-unknown-unknown --release
+          cargo build -p tr808-wasm -p prophet-wasm -p tb303-wasm --target wasm32-unknown-unknown --release
           cp target/wasm32-unknown-unknown/release/tr808_wasm.wasm orbit/public/tr808.wasm
           cp target/wasm32-unknown-unknown/release/prophet_wasm.wasm orbit/public/prophet-dsp.wasm
+          cp target/wasm32-unknown-unknown/release/tb303_wasm.wasm orbit/public/tb303.wasm
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
