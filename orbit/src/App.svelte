@@ -1,19 +1,22 @@
 <script lang="ts">
-    import { OrbitEngine } from './audio/engine';
-    import { setEngine } from './stores/state';
-    import StepSequencer from './components/StepSequencer.svelte';
-    import Transport from './components/Transport.svelte';
-    import PadCircle from './components/PadCircle.svelte';
-    import Slider from './components/Slider.svelte';
+    import { OrbitEngine } from './drum/audio/engine';
+    import { setDrumEngine } from './drum/stores/state';
+    import { ProphetEngine } from './pad/audio/engine';
+    import { setPadEngine } from './pad/stores/state';
+    import DrumPanel from './drum/DrumPanel.svelte';
+    import PadPanel from './pad/PadPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
+    let panel = $state<'drum' | 'pad'>('drum');
 
     async function start() {
         loading = true;
-        const engine = new OrbitEngine();
-        await engine.init();
-        setEngine(engine);
+        const drumEngine = new OrbitEngine();
+        const padEngine = new ProphetEngine();
+        await Promise.all([drumEngine.init(), padEngine.init()]);
+        setDrumEngine(drumEngine);
+        setPadEngine(padEngine);
         started = true;
         loading = false;
     }
@@ -28,10 +31,15 @@
     </div>
 {:else}
     <div class="app">
-        <StepSequencer />
-        <Transport />
-        <PadCircle />
-        <Slider />
+        <nav class="panel-tabs">
+            <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
+            <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
+        </nav>
+        {#if panel === 'drum'}
+            <DrumPanel />
+        {:else}
+            <PadPanel />
+        {/if}
     </div>
 {/if}
 
@@ -93,5 +101,32 @@
         flex-direction: column;
         padding-top: env(safe-area-inset-top, 16px);
         overflow: hidden;
+    }
+
+    .panel-tabs {
+        display: flex;
+        justify-content: center;
+        gap: 0;
+        padding: 8px 24px 4px;
+    }
+    .tab-btn {
+        padding: 4px 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: transparent;
+        color: var(--orbit-hint, #666);
+        border: 1.5px solid var(--orbit-border, #444);
+        cursor: pointer;
+        transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
+    }
+    .tab-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
+    .tab-btn:last-child { border-radius: 0 12px 12px 0; }
+    .tab-btn.active {
+        background: var(--orbit-ink, #eee);
+        color: var(--orbit-surface, #111);
+        border-color: var(--orbit-ink, #eee);
     }
 </style>

@@ -1,55 +1,65 @@
 <script lang="ts">
-    import { VOICES, PARAMS } from '../constants';
-    import {
-        selectedVoice, selectedParam, triggeredVoices, perPadEngine,
-        selectVoice, selectParam, triggerPad, togglePadEngine
-    } from '../stores/state';
+    interface Voice {
+        id: string;
+        label: string;
+        colour: string;
+    }
 
-    $: selVoice = $selectedVoice;
-    $: selParam = $selectedParam;
-    $: triggered = $triggeredVoices;
-    $: padEngines = $perPadEngine;
+    let {
+        voices,
+        params,
+        selectedVoice,
+        selectedParam,
+        triggeredVoices,
+        onPadClick,
+        onPadDblClick = undefined,
+        onParamSelect,
+        badge = undefined,
+    }: {
+        voices: Voice[];
+        params: string[];
+        selectedVoice: number;
+        selectedParam: string;
+        triggeredVoices: Set<number>;
+        onPadClick: (index: number) => void;
+        onPadDblClick?: (index: number) => void;
+        onParamSelect: (param: string) => void;
+        badge?: (index: number) => string | null;
+    } = $props();
 
     const ORBIT_R = 120;
     const DIAMOND_R = 48;
 
-    // Position 8 pads in a circle
     function padPos(index: number) {
-        const angle = (index / 8) * Math.PI * 2 - Math.PI / 2; // start from top
+        const angle = (index / voices.length) * Math.PI * 2 - Math.PI / 2;
         return {
             x: Math.cos(angle) * ORBIT_R,
             y: Math.sin(angle) * ORBIT_R,
         };
     }
 
-    // Position 4 diamonds in inner circle
     function diamondPos(index: number) {
-        const angle = (index / 4) * Math.PI * 2 - Math.PI / 2;
+        const angle = (index / params.length) * Math.PI * 2 - Math.PI / 2;
         return {
             x: Math.cos(angle) * DIAMOND_R,
             y: Math.sin(angle) * DIAMOND_R,
         };
     }
 
-    function handlePadClick(index: number) {
-        selectVoice(index);
-        triggerPad(index);
-    }
-
     function handlePadDblClick(e: MouseEvent, index: number) {
+        if (!onPadDblClick) return;
         e.preventDefault();
-        togglePadEngine(index);
+        onPadDblClick(index);
     }
 </script>
 
 <div class="constellation">
     <div class="orbit-area">
-        <!-- Voice pads -->
-        {#each VOICES as voice, i}
+        {#each voices as voice, i}
             {@const pos = padPos(i)}
-            {@const isSelected = selVoice === i}
-            {@const isTriggered = triggered.has(i)}
-            {@const padEng = padEngines[i] ?? '808'}
+            {@const isSelected = selectedVoice === i}
+            {@const isTriggered = triggeredVoices.has(i)}
+            {@const badgeText = badge?.(i) ?? null}
             <button
                 class="pad"
                 class:selected={isSelected}
@@ -65,19 +75,20 @@
                     {isSelected ? `box-shadow: 0 0 16px ${voice.colour}59;` : ''}
                     {isTriggered ? `box-shadow: 0 0 20px ${voice.colour}80; transform: scale(1.05);` : ''}
                 "
-                onclick={() => handlePadClick(i)}
+                onclick={() => onPadClick(i)}
                 ondblclick={(e) => handlePadDblClick(e, i)}
                 aria-label={voice.label}
             >
                 <span class="pad-label" style="color: {isSelected || isTriggered ? '#fff' : voice.colour + '88'}">{voice.label}</span>
-                <span class="engine-badge">{padEng === '909' ? '9' : '8'}</span>
+                {#if badgeText}
+                    <span class="engine-badge">{badgeText}</span>
+                {/if}
             </button>
         {/each}
 
-        <!-- Parameter diamonds -->
-        {#each PARAMS as param, i}
+        {#each params as param, i}
             {@const pos = diamondPos(i)}
-            {@const isActive = selParam === param}
+            {@const isActive = selectedParam === param}
             <button
                 class="diamond"
                 class:active={isActive}
@@ -85,7 +96,7 @@
                     left: calc(50% + {pos.x}px - 14px);
                     top: calc(50% + {pos.y}px - 14px);
                 "
-                onclick={() => selectParam(param)}
+                onclick={() => onParamSelect(param)}
                 aria-label={param}
             >
                 <span class="diamond-label">{param.charAt(0).toUpperCase()}</span>

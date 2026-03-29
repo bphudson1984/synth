@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { isPlaying, bpm, globalEngine, togglePlay, setBpm, setGlobalEngine } from '../stores/state';
-    import { MIN_BPM, MAX_BPM } from '../constants';
+    import { isPlaying, bpm, globalEngine, togglePlay, setBpm, setGlobalEngine } from './stores/state';
+    import { MIN_BPM, MAX_BPM } from '../shared/stores/transport';
 
     $: playing = $isPlaying;
     $: currentBpm = $bpm;

@@ -17,13 +17,8 @@ export type ParamName = typeof PARAMS[number];
 export const NUM_STEPS = 16;
 export const NUM_VOICES = 8;
 
-export const DEFAULT_BPM = 120;
-export const MIN_BPM = 60;
-export const MAX_BPM = 200;
-
-// Map ORBIT voice index to engine track ID (for sequencer)
 export function getEngineTrackId(orbitIndex: number): number {
-    return VOICES[orbitIndex]?.engineId808 ?? 0; // sequencer always uses 808 track IDs
+    return VOICES[orbitIndex]?.engineId808 ?? 0;
 }
 
 export function getEngineVoiceId(orbitIndex: number, engine: EngineType): number {

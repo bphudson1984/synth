@@ -1,4 +1,5 @@
 import { VOICES, getEngineVoiceId, getEngineTrackId, type EngineType } from '../constants';
+import { getAudioContext } from '../../shared/audio/context';
 
 export class OrbitEngine {
     private node: AudioWorkletNode | null = null;
@@ -7,7 +8,7 @@ export class OrbitEngine {
     onStep: ((step: number) => void) | null = null;
 
     async init(): Promise<void> {
-        const ctx = new AudioContext({ sampleRate: 48000 });
+        const ctx = await getAudioContext();
         const wasmModule = await WebAssembly.compileStreaming(fetch(import.meta.env.BASE_URL + 'tr808.wasm'));
         await ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'worklet-processor.js');
         this.node = new AudioWorkletNode(ctx, 'tr808-processor', {

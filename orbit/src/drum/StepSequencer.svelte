@@ -1,8 +1,7 @@
 <script lang="ts">
-    import { VOICES, NUM_STEPS } from '../constants';
-    import { selectedVoice, patterns, currentStep, isPlaying, toggleStep } from '../stores/state';
+    import { VOICES, NUM_STEPS } from './constants';
+    import { selectedVoice, patterns, currentStep, isPlaying, toggleStep } from './stores/state';
 
-    // Get current voice's pattern and colour
     $: voice = $selectedVoice;
     $: colour = VOICES[voice].colour;
     $: pattern = $patterns[voice];

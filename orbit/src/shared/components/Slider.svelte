@@ -1,20 +1,24 @@
 <script lang="ts">
-    import { VOICES } from '../constants';
-    import { selectedVoice, selectedParam, sliderValue, setSliderValue } from '../stores/state';
-
-    $: voice = $selectedVoice;
-    $: param = $selectedParam;
-    $: value = $sliderValue;
-    $: colour = VOICES[voice].colour;
+    let {
+        label,
+        value,
+        colour,
+        onChange,
+    }: {
+        label: string;
+        value: number;
+        colour: string;
+        onChange: (value: number) => void;
+    } = $props();
 
     function handleInput(e: Event) {
-        setSliderValue(Number((e.target as HTMLInputElement).value));
+        onChange(Number((e.target as HTMLInputElement).value));
     }
 </script>
 
 <div class="slider-area">
     <div class="slider-header">
-        <span class="slider-label">{param.toUpperCase()}</span>
+        <span class="slider-label">{label.toUpperCase()}</span>
         <span class="slider-value" style="color: {colour}">{Math.round(value)}</span>
     </div>
     <div class="slider-track-container">

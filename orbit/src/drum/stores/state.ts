@@ -1,9 +1,10 @@
 import { writable, derived, get } from 'svelte/store';
-import { NUM_VOICES, NUM_STEPS, DEFAULT_BPM, type ParamName, type EngineType, getEngineVoiceId, getEngineTrackId } from '../constants';
+import { NUM_VOICES, NUM_STEPS, type ParamName, type EngineType } from '../constants';
 import type { OrbitEngine } from '../audio/engine';
+import { bpm } from '../../shared/stores/transport';
 
 let engine: OrbitEngine | null = null;
-export function setEngine(e: OrbitEngine) {
+export function setDrumEngine(e: OrbitEngine) {
     engine = e;
     e.onStep = (step) => currentStep.set(step);
 }
@@ -12,7 +13,7 @@ export function setEngine(e: OrbitEngine) {
 export const selectedVoice = writable(0);
 export const selectedParam = writable<ParamName>('level');
 
-// Engine selection — per-pad and global
+// Engine selection
 export const globalEngine = writable<EngineType>('808');
 export const perPadEngine = writable<Record<number, EngineType>>(
     Object.fromEntries(Array.from({ length: NUM_VOICES }, (_, i) => [i, '808' as EngineType]))
@@ -40,7 +41,7 @@ export const patterns = writable(initPatterns());
 
 // Transport
 export const isPlaying = writable(false);
-export const bpm = writable(DEFAULT_BPM);
+export { bpm } from '../../shared/stores/transport';
 export const currentStep = writable(0);
 export const triggeredVoices = writable(new Set<number>());
 
