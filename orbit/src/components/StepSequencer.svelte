@@ -26,11 +26,11 @@
 </div>
 
 <style>
-    .sequencer { padding: 0 24px; }
+    .sequencer { padding: 0 12px; }
     .grid {
         display: grid;
         grid-template-columns: repeat(8, 1fr);
-        gap: 4px;
+        gap: 6px;
     }
     .step {
         aspect-ratio: 1;
