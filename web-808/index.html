@@ -280,7 +280,9 @@
 
             try {
                 const ctx = new AudioContext({ sampleRate: 48000 });
-                const wasmModule = await WebAssembly.compileStreaming(fetch('/public/tr808.wasm'));
+                // Fetch raw WASM bytes — Chrome silently drops WebAssembly.Module
+                // objects posted to AudioWorklet threads, causing init to hang.
+                const wasmBytes = await (await fetch('/public/tr808.wasm')).arrayBuffer();
                 await ctx.audioWorklet.addModule('/public/worklet-processor.js');
 
                 node = new AudioWorkletNode(ctx, 'tr808-processor', {
@@ -289,7 +291,10 @@
 
                 await new Promise(resolve => {
                     node.port.onmessage = (e) => { if (e.data.type === 'ready') resolve(); };
-                    node.port.postMessage({ type: 'wasm-module', module: wasmModule });
+                    node.port.postMessage(
+                        { type: 'wasm-bytes', bytes: wasmBytes },
+                        [wasmBytes]
+                    );
                 });
 
                 node.connect(ctx.destination);
