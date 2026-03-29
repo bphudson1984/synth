@@ -13,6 +13,8 @@ class TR808Processor extends AudioWorkletProcessor {
                 this.wasm.init(sampleRate);
                 this.ready = true;
                 this.port.postMessage({ type: 'ready' });
+            }).catch(err => {
+                this.port.postMessage({ type: 'error', message: err.message });
             });
         } else if (data.type === 'trigger') {
             if (this.ready) this.wasm.trigger(data.voice);

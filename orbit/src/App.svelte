@@ -15,15 +15,21 @@
 
     async function start() {
         loading = true;
-        const drumEngine = new OrbitEngine();
-        const padEngine = new ProphetEngine();
-        const acidEngine = new AcidEngine();
-        await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init()]);
-        setDrumEngine(drumEngine);
-        setPadEngine(padEngine);
-        setAcidEngine(acidEngine);
-        started = true;
-        loading = false;
+        try {
+            const drumEngine = new OrbitEngine();
+            const padEngine = new ProphetEngine();
+            const acidEngine = new AcidEngine();
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init()]);
+            setDrumEngine(drumEngine);
+            setPadEngine(padEngine);
+            setAcidEngine(acidEngine);
+            started = true;
+            loading = false;
+        } catch (err) {
+            console.error('Engine initialization failed:', err);
+        } finally {
+            loading = false;
+        }
     }
 </script>
 
