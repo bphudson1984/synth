@@ -1,12 +1,12 @@
 export const CHORDS = [
-    { id: 'i',    label: 'Cm',   notes: [48, 51, 55], colour: '#6B5CE7' },
-    { id: 'ii',   label: 'Ddm',  notes: [50, 53, 56], colour: '#8B6CE7' },
-    { id: 'III',  label: 'Eb',   notes: [51, 55, 58], colour: '#5C8BE7' },
-    { id: 'iv',   label: 'Fm',   notes: [53, 56, 60], colour: '#5CAEE7' },
-    { id: 'v',    label: 'Gm',   notes: [55, 58, 62], colour: '#5CE7D4' },
-    { id: 'VI',   label: 'Ab',   notes: [56, 60, 63], colour: '#5CE7A0' },
-    { id: 'VII',  label: 'Bb',   notes: [58, 62, 65], colour: '#7CE75C' },
-    { id: 'i8',   label: "Cm'",  notes: [60, 63, 67], colour: '#A0E75C' },
+    { id: 'i',    label: 'Cm',   notes: [48, 51, 55], colour: '#E8944A' },
+    { id: 'ii',   label: 'Ddm',  notes: [50, 53, 56], colour: '#EDA462' },
+    { id: 'III',  label: 'Eb',   notes: [51, 55, 58], colour: '#D9843A' },
+    { id: 'iv',   label: 'Fm',   notes: [53, 56, 60], colour: '#EDA462' },
+    { id: 'v',    label: 'Gm',   notes: [55, 58, 62], colour: '#E8944A' },
+    { id: 'VI',   label: 'Ab',   notes: [56, 60, 63], colour: '#D9843A' },
+    { id: 'VII',  label: 'Bb',   notes: [58, 62, 65], colour: '#EDA462' },
+    { id: 'i8',   label: "Cm'",  notes: [60, 63, 67], colour: '#E8944A' },
 ] as const;
 
 export const PAD_PARAMS = ['cutoff', 'resonance', 'attack', 'release'] as const;

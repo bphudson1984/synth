@@ -1,12 +1,17 @@
 import { writable, derived, get } from 'svelte/store';
 import { NUM_VOICES, NUM_STEPS, type ParamName, type EngineType } from '../constants';
 import type { OrbitEngine } from '../audio/engine';
-import { bpm } from '../../shared/stores/transport';
+import { bpm, registerEngine } from '../../shared/stores/transport';
+import { PRESETS } from '../presets';
 
 let engine: OrbitEngine | null = null;
 export function setDrumEngine(e: OrbitEngine) {
     engine = e;
     e.onStep = (step) => currentStep.set(step);
+    registerEngine({
+        play: () => { engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
+        stop: () => { engine?.seqStop(); currentStep.set(0); },
+    });
 }
 
 // Selection
@@ -40,8 +45,7 @@ const initPatterns = () => {
 export const patterns = writable(initPatterns());
 
 // Transport
-export const isPlaying = writable(false);
-export { bpm } from '../../shared/stores/transport';
+export { isPlaying, bpm, togglePlay } from '../../shared/stores/transport';
 export const currentStep = writable(0);
 export const triggeredVoices = writable(new Set<number>());
 
@@ -75,18 +79,6 @@ export function toggleStep(step: number) {
     engine?.seqToggleStep(voice, step);
 }
 
-export function togglePlay() {
-    const playing = !get(isPlaying);
-    isPlaying.set(playing);
-    if (playing) {
-        engine?.seqSetBpm(get(bpm));
-        engine?.seqPlay();
-    } else {
-        engine?.seqStop();
-        currentStep.set(0);
-    }
-}
-
 export function setBpm(value: number) {
     bpm.set(value);
     engine?.seqSetBpm(value);
@@ -118,4 +110,52 @@ export function setPadEngine(padIndex: number, eng: EngineType) {
 export function togglePadEngine(padIndex: number) {
     const current = get(perPadEngine)[padIndex];
     setPadEngine(padIndex, current === '808' ? '909' : '808');
+}
+
+// Presets
+export const currentDrumPreset = writable(-1);
+
+export function loadDrumPreset(index: number) {
+    const preset = PRESETS[index];
+    if (!preset || !engine) return;
+    currentDrumPreset.set(index);
+    // Clear existing pattern in engine
+    engine.seqClear();
+    // Load new pattern
+    const newPatterns: Record<number, boolean[]> = {};
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        newPatterns[voice] = [...preset.pattern[voice]];
+        for (let step = 0; step < NUM_STEPS; step++) {
+            if (preset.pattern[voice][step]) {
+                engine.seqToggleStep(voice, step);
+            }
+        }
+    }
+    patterns.set(newPatterns);
+}
+
+export function randomizeDrumPattern() {
+    if (!engine) return;
+    engine.seqClear();
+    const newPatterns: Record<number, boolean[]> = {};
+    for (let voice = 0; voice < NUM_VOICES; voice++) {
+        newPatterns[voice] = Array(NUM_STEPS).fill(false);
+        // Different density per voice type
+        const density = voice === 0 ? 0.25  // kick: sparse
+            : voice === 1 ? 0.12            // snare: very sparse
+            : voice === 2 ? 0.5             // chh: dense
+            : voice === 3 ? 0.06            // ohh: rare
+            : voice === 4 ? 0.12            // clap: sparse
+            : voice === 5 ? 0.08            // tom
+            : voice === 6 ? 0.1             // rim
+            : 0.15;                          // perc
+        for (let step = 0; step < NUM_STEPS; step++) {
+            if (Math.random() < density) {
+                newPatterns[voice][step] = true;
+                engine.seqToggleStep(voice, step);
+            }
+        }
+    }
+    patterns.set(newPatterns);
+    currentDrumPreset.set(-1);
 }
