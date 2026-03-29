@@ -4,6 +4,7 @@ export class OrbitEngine {
     private node: AudioWorkletNode | null = null;
     private _ready = false;
     get ready() { return this._ready; }
+    onStep: ((step: number) => void) | null = null;
 
     async init(): Promise<void> {
         const ctx = new AudioContext({ sampleRate: 48000 });
@@ -15,6 +16,7 @@ export class OrbitEngine {
         await new Promise<void>((resolve) => {
             this.node!.port.onmessage = (e) => {
                 if (e.data.type === 'ready') { this._ready = true; resolve(); }
+                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
             this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });
         });

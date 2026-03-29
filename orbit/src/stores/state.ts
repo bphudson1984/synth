@@ -3,7 +3,10 @@ import { NUM_VOICES, NUM_STEPS, DEFAULT_BPM, type ParamName, type EngineType, ge
 import type { OrbitEngine } from '../audio/engine';
 
 let engine: OrbitEngine | null = null;
-export function setEngine(e: OrbitEngine) { engine = e; }
+export function setEngine(e: OrbitEngine) {
+    engine = e;
+    e.onStep = (step) => currentStep.set(step);
+}
 
 // Selection
 export const selectedVoice = writable(0);
