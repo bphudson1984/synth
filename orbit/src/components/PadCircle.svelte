@@ -9,8 +9,8 @@
     $: selParam = $selectedParam;
     $: triggered = $triggeredVoices;
 
-    const ORBIT_R = 120;  // pad orbit radius
-    const DIAMOND_R = 48; // diamond orbit radius
+    const ORBIT_R = 140;  // pad orbit radius
+    const DIAMOND_R = 52; // diamond orbit radius
 
     // Position 8 pads in a circle
     function padPos(index: number) {
@@ -48,8 +48,8 @@
                 class:selected={isSelected}
                 class:triggered={isTriggered}
                 style="
-                    left: calc(50% + {pos.x}px - 26px);
-                    top: calc(50% + {pos.y}px - 26px);
+                    left: calc(50% + {pos.x}px - 32px);
+                    top: calc(50% + {pos.y}px - 32px);
                     --voice-color: {voice.colour};
                     background: {isSelected || isTriggered
                         ? voice.colour
@@ -102,12 +102,12 @@
     }
     .orbit-area {
         position: relative;
-        width: 300px;
-        height: 300px;
+        width: 360px;
+        height: 360px;
     }
     .pad {
         position: absolute;
-        width: 52px; height: 52px;
+        width: 64px; height: 64px;
         border-radius: 50%;
         border: none;
         cursor: pointer;
@@ -117,7 +117,7 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .pad-label {
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 500;
         letter-spacing: 0.5px;
         text-transform: uppercase;
