@@ -3,22 +3,28 @@
     import { setDrumEngine } from './drum/stores/state';
     import { ProphetEngine } from './pad/audio/engine';
     import { setPadEngine } from './pad/stores/state';
+    import { AcidEngine } from './acid/audio/engine';
+    import { setAcidEngine } from './acid/stores/state';
     import DrumPanel from './drum/DrumPanel.svelte';
     import PadPanel from './pad/PadPanel.svelte';
+    import AcidPanel from './acid/AcidPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
-    let panel = $state<'drum' | 'pad'>('drum');
+    let panel = $state<'drum' | 'pad' | 'acid'>('drum');
 
     async function start() {
         loading = true;
         try {
             const drumEngine = new OrbitEngine();
             const padEngine = new ProphetEngine();
-            await Promise.all([drumEngine.init(), padEngine.init()]);
+            const acidEngine = new AcidEngine();
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init()]);
             setDrumEngine(drumEngine);
             setPadEngine(padEngine);
+            setAcidEngine(acidEngine);
             started = true;
+            loading = false;
         } catch (err) {
             console.error('Engine initialization failed:', err);
         } finally {
@@ -29,6 +35,7 @@
 
 {#if !started}
     <div class="splash">
+        <div class="brand">Hudsonic</div>
         <div class="logo">ORBIT</div>
         <button class="start-btn" onclick={start} disabled={loading}>
             {loading ? 'LOADING...' : 'TAP TO START'}
@@ -39,11 +46,14 @@
         <nav class="panel-tabs">
             <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
+            <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
         </nav>
         {#if panel === 'drum'}
             <DrumPanel />
-        {:else}
+        {:else if panel === 'pad'}
             <PadPanel />
+        {:else}
+            <AcidPanel />
         {/if}
     </div>
 {/if}
@@ -76,6 +86,15 @@
         align-items: center;
         justify-content: center;
         gap: 32px;
+    }
+    .brand {
+        font-size: 13px;
+        font-weight: 300;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        color: var(--orbit-hint, #666);
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: -20px;
     }
     .logo {
         font-size: 48px;
@@ -128,6 +147,7 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .tab-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
+    .tab-btn:not(:first-child):not(:last-child) { border-radius: 0; border-right: none; }
     .tab-btn:last-child { border-radius: 0 12px 12px 0; }
     .tab-btn.active {
         background: var(--orbit-ink, #eee);

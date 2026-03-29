@@ -8,6 +8,8 @@ members = [
     "crates/tr808-dsp",
     "crates/tr808-wasm",
     "crates/tr909-dsp",
+    "crates/tb303-dsp",
+    "crates/tb303-wasm",
     "xtask",
 ]
 resolver = "2"

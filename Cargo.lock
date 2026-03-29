@@ -1920,6 +1920,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tb303-dsp"
+version = "0.1.0"
+dependencies = [
+ "dsp-common",
+]
+
+[[package]]
+name = "tb303-wasm"
+version = "0.1.0"
+dependencies = [
+ "tb303-dsp",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

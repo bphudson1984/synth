@@ -14,8 +14,6 @@ export class ProphetEngine {
         }
         const wasmBytes = await wasmResponse.arrayBuffer();
 
-        await ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'prophet-worklet.js');
-
         this.node = new AudioWorkletNode(ctx, 'prophet-processor', {
             outputChannelCount: [2],
             numberOfOutputs: 1,
