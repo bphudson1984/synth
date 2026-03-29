@@ -7,6 +7,7 @@ echo "=== Building WASM ==="
 cargo build -p prophet-wasm --target wasm32-unknown-unknown --release
 cargo build -p tr808-wasm --target wasm32-unknown-unknown --release
 cp "$ROOT/target/wasm32-unknown-unknown/release/prophet_wasm.wasm" "$ROOT/web/public/prophet-dsp.wasm"
+cp "$ROOT/target/wasm32-unknown-unknown/release/prophet_wasm.wasm" "$ROOT/orbit/public/prophet-dsp.wasm"
 cp "$ROOT/target/wasm32-unknown-unknown/release/tr808_wasm.wasm" "$ROOT/orbit/public/tr808.wasm"
 
 echo "=== Building ORBIT (root /) ==="
