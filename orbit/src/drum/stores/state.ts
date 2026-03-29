@@ -2,6 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { NUM_VOICES, NUM_STEPS, type ParamName, type EngineType } from '../constants';
 import type { OrbitEngine } from '../audio/engine';
 import { bpm, registerEngine } from '../../shared/stores/transport';
+import { registerMixerCallback } from '../../shared/stores/mixer';
 import { PRESETS } from '../presets';
 
 let engine: OrbitEngine | null = null;
@@ -12,6 +13,7 @@ export function setDrumEngine(e: OrbitEngine) {
         play: () => { engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
         stop: () => { engine?.seqStop(); currentStep.set(0); },
     });
+    registerMixerCallback('drum', (gain) => { engine?.setMasterVolume(gain); }, (pan) => { engine?.setPan(pan); });
 }
 
 // Selection

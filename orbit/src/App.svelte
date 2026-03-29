@@ -8,10 +8,11 @@
     import DrumPanel from './drum/DrumPanel.svelte';
     import PadPanel from './pad/PadPanel.svelte';
     import AcidPanel from './acid/AcidPanel.svelte';
+    import MixPanel from './mix/MixPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
-    let panel = $state<'drum' | 'pad' | 'acid'>('drum');
+    let panel = $state<'drum' | 'pad' | 'acid' | 'mix'>('drum');
 
     async function start() {
         loading = true;
@@ -47,13 +48,16 @@
             <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
+            <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
         </nav>
         {#if panel === 'drum'}
             <DrumPanel />
         {:else if panel === 'pad'}
             <PadPanel />
-        {:else}
+        {:else if panel === 'acid'}
             <AcidPanel />
+        {:else}
+            <MixPanel />
         {/if}
     </div>
 {/if}

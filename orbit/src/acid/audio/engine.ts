@@ -2,6 +2,7 @@ import { getAudioContext } from '../../shared/audio/context';
 
 export class AcidEngine {
     private node: AudioWorkletNode | null = null;
+    private panner: StereoPannerNode | null = null;
     private _ready = false;
     get ready() { return this._ready; }
     onStep: ((step: number) => void) | null = null;
@@ -19,8 +20,12 @@ export class AcidEngine {
             };
             this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });
         });
-        this.node.connect(ctx.destination);
+        this.panner = ctx.createStereoPanner();
+        this.node.connect(this.panner);
+        this.panner.connect(ctx.destination);
     }
+
+    setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
 
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
     seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }

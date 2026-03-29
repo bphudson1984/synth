@@ -4,16 +4,17 @@ import type { ProphetEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import { PRESETS, type Preset } from '../presets';
 import { bpm } from '../../shared/stores/transport';
+import { registerMixerCallback } from '../../shared/stores/mixer';
 
 let engine: ProphetEngine | null = null;
 export function setPadEngine(e: ProphetEngine) {
     engine = e;
-    // Sync arp BPM whenever shared BPM changes
     bpm.subscribe((value) => {
         if (engine && get(arpEnabled)) {
             engine.setParam(PARAM.ARP_BPM, value);
         }
     });
+    registerMixerCallback('pad', (gain) => { engine?.setParam(PARAM.MASTER_VOL, gain); }, (pan) => { engine?.setPan(pan); });
 }
 
 // Preset
