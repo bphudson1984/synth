@@ -7,6 +7,7 @@
         { id: 'drum', label: 'DRUM', colour: '#378ADD' },
         { id: 'pad',  label: 'PAD',  colour: '#E8944A' },
         { id: 'acid', label: 'ACID', colour: '#5DBE6E' },
+        { id: 'lead', label: 'LEAD', colour: '#B56ECC' },
     ];
 
     function handleVolume(id: ChannelId, e: Event) {

@@ -5,14 +5,17 @@
     import { setPadEngine } from './pad/stores/state';
     import { AcidEngine } from './acid/audio/engine';
     import { setAcidEngine } from './acid/stores/state';
+    import { BraidsEngine } from './lead/audio/engine';
+    import { setLeadEngine } from './lead/stores/state';
     import DrumPanel from './drum/DrumPanel.svelte';
     import PadPanel from './pad/PadPanel.svelte';
     import AcidPanel from './acid/AcidPanel.svelte';
+    import LeadPanel from './lead/LeadPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
-    let panel = $state<'drum' | 'pad' | 'acid' | 'mix'>('drum');
+    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'mix'>('drum');
 
     async function start() {
         loading = true;
@@ -20,10 +23,12 @@
             const drumEngine = new OrbitEngine();
             const padEngine = new ProphetEngine();
             const acidEngine = new AcidEngine();
-            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init()]);
+            const leadEngine = new BraidsEngine();
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init()]);
             setDrumEngine(drumEngine);
             setPadEngine(padEngine);
             setAcidEngine(acidEngine);
+            setLeadEngine(leadEngine);
             started = true;
             loading = false;
         } catch (err) {
@@ -48,6 +53,7 @@
             <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
+            <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
             <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
         </nav>
         {#if panel === 'drum'}
@@ -56,6 +62,8 @@
             <PadPanel />
         {:else if panel === 'acid'}
             <AcidPanel />
+        {:else if panel === 'lead'}
+            <LeadPanel />
         {:else}
             <MixPanel />
         {/if}

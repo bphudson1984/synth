@@ -10,6 +10,8 @@ members = [
     "crates/tr909-dsp",
     "crates/tb303-dsp",
     "crates/tb303-wasm",
+    "crates/braids-dsp",
+    "crates/braids-wasm",
     "xtask",
 ]
 resolver = "2"
