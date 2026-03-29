@@ -11,7 +11,11 @@ export function getAudioContext(): Promise<AudioContext> {
             await ctx.audioWorklet.addModule(base + 'prophet-worklet.js');
             await ctx.audioWorklet.addModule(base + 'tb303-worklet.js');
             return ctx;
-        })();
+        })().catch((err) => {
+            // Reset so the next user tap can retry
+            initPromise = null;
+            throw err;
+        });
     }
     return initPromise;
 }

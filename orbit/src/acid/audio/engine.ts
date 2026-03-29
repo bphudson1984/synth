@@ -12,9 +12,20 @@ export class AcidEngine {
         this.node = new AudioWorkletNode(ctx, 'tb303-processor', {
             outputChannelCount: [2], numberOfOutputs: 1,
         });
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('TB303 worklet initialization timed out'));
+            }, 10000);
+
             this.node!.port.onmessage = (e) => {
-                if (e.data.type === 'ready') { this._ready = true; resolve(); }
+                if (e.data.type === 'ready') {
+                    clearTimeout(timeout);
+                    this._ready = true;
+                    resolve();
+                } else if (e.data.type === 'error') {
+                    clearTimeout(timeout);
+                    reject(new Error(e.data.message ?? 'TB303 worklet failed'));
+                }
                 if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
             this.node!.port.postMessage({ type: 'wasm-module', module: wasmModule });

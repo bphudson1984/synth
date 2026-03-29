@@ -14,6 +14,8 @@ class TB303Processor extends AudioWorkletProcessor {
                 this.wasm.init(sampleRate);
                 this.ready = true;
                 this.port.postMessage({ type: 'ready' });
+            }).catch(err => {
+                this.port.postMessage({ type: 'error', message: err.message });
             });
         } else if (data.type === 'set-param') {
             if (this.ready) this.wasm.set_param(data.id, data.value);
