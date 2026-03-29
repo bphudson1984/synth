@@ -7,6 +7,7 @@ members = [
     "crates/prophet-wasm",
     "crates/tr808-dsp",
     "crates/tr808-wasm",
+    "crates/tr909-dsp",
     "xtask",
 ]
 resolver = "2"

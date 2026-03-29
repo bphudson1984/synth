@@ -30,6 +30,10 @@ class TR808Processor extends AudioWorkletProcessor {
             if (this.ready) this.wasm.seq_toggle_step(data.track, data.step);
         } else if (data.type === 'seq-clear') {
             if (this.ready) this.wasm.seq_clear();
+        } else if (data.type === 'set-track-engine') {
+            if (this.ready) this.wasm.set_track_engine(data.track, data.is909 ? 1 : 0);
+        } else if (data.type === 'set-all-engines') {
+            if (this.ready) this.wasm.set_all_engines(data.is909 ? 1 : 0);
         }
     }
 

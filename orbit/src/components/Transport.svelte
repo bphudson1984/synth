@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { isPlaying, bpm, togglePlay, setBpm } from '../stores/state';
+    import { isPlaying, bpm, globalEngine, togglePlay, setBpm, setGlobalEngine } from '../stores/state';
     import { MIN_BPM, MAX_BPM } from '../constants';
 
     $: playing = $isPlaying;
     $: currentBpm = $bpm;
+    $: engine = $globalEngine;
 
     function adjustBpm(delta: number) {
         const newBpm = Math.max(MIN_BPM, Math.min(MAX_BPM, currentBpm + delta));
@@ -12,6 +13,10 @@
 </script>
 
 <div class="transport">
+    <div class="engine-toggle">
+        <button class="eng-btn" class:active={engine === '808'} onclick={() => setGlobalEngine('808')}>808</button>
+        <button class="eng-btn" class:active={engine === '909'} onclick={() => setGlobalEngine('909')}>909</button>
+    </div>
     <div class="bpm-section">
         <button class="bpm-btn" onclick={() => adjustBpm(-1)}>−</button>
         <span class="bpm-value">{currentBpm}</span>
@@ -34,49 +39,54 @@
         align-items: center;
         padding: 8px 24px;
     }
+    .engine-toggle { display: flex; gap: 0; }
+    .eng-btn {
+        padding: 4px 12px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        background: transparent;
+        color: var(--orbit-hint, #666);
+        border: 1.5px solid var(--orbit-border, #444);
+        cursor: pointer;
+        transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
+    }
+    .eng-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
+    .eng-btn:last-child { border-radius: 0 12px 12px 0; }
+    .eng-btn.active {
+        background: var(--orbit-ink, #eee);
+        color: var(--orbit-surface, #111);
+        border-color: var(--orbit-ink, #eee);
+    }
     .bpm-section { display: flex; align-items: center; gap: 8px; }
     .bpm-value {
-        font-size: 22px;
-        font-weight: 500;
+        font-size: 22px; font-weight: 500;
         color: var(--orbit-ink, #eee);
-        letter-spacing: -0.5px;
-        min-width: 42px;
-        text-align: center;
+        letter-spacing: -0.5px; min-width: 42px; text-align: center;
     }
     .bpm-btn {
-        width: 28px; height: 28px;
-        border-radius: 50%;
+        width: 28px; height: 28px; border-radius: 50%;
         border: 1px solid var(--orbit-border, #444);
-        background: transparent;
-        color: var(--orbit-ink, #eee);
-        font-size: 16px;
-        cursor: pointer;
+        background: transparent; color: var(--orbit-ink, #eee);
+        font-size: 16px; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
     }
     .transport-buttons { display: flex; gap: 12px; }
     .transport-btn {
-        width: 44px; height: 44px;
-        border-radius: 50%;
+        width: 44px; height: 44px; border-radius: 50%;
         border: 1.5px solid var(--orbit-ink, #eee);
-        background: transparent;
-        cursor: pointer;
+        background: transparent; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
-    .transport-btn.active {
-        background: var(--orbit-ink, #eee);
-    }
-    .stop-icon {
-        width: 12px; height: 12px;
-        background: var(--orbit-ink, #eee);
-        border-radius: 1px;
-    }
+    .transport-btn.active { background: var(--orbit-ink, #eee); }
+    .stop-icon { width: 12px; height: 12px; background: var(--orbit-ink, #eee); border-radius: 1px; }
     .transport-btn.active .stop-icon { background: var(--orbit-surface, #111); }
     .play-icon {
         width: 0; height: 0;
         border-left: 10px solid var(--orbit-ink, #eee);
-        border-top: 7px solid transparent;
-        border-bottom: 7px solid transparent;
+        border-top: 7px solid transparent; border-bottom: 7px solid transparent;
         margin-left: 3px;
     }
     .transport-btn.active .play-icon { border-left-color: var(--orbit-surface, #111); }

@@ -8,6 +8,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 tr808-dsp = { path = "../tr808-dsp" }
+tr909-dsp = { path = "../tr909-dsp" }
 
 [profile.release]
 opt-level = 3

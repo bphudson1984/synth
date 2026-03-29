@@ -2078,6 +2078,15 @@ name = "tr808-wasm"
 version = "0.1.0"
 dependencies = [
  "tr808-dsp",
+ "tr909-dsp",
+]
+
+[[package]]
+name = "tr909-dsp"
+version = "0.1.0"
+dependencies = [
+ "audio-test-harness",
+ "dsp-common",
 ]
 
 [[package]]

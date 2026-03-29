@@ -1,16 +1,17 @@
 <script lang="ts">
     import { VOICES, PARAMS } from '../constants';
     import {
-        selectedVoice, selectedParam, triggeredVoices,
-        selectVoice, selectParam, triggerPad
+        selectedVoice, selectedParam, triggeredVoices, perPadEngine,
+        selectVoice, selectParam, triggerPad, togglePadEngine
     } from '../stores/state';
 
     $: selVoice = $selectedVoice;
     $: selParam = $selectedParam;
     $: triggered = $triggeredVoices;
+    $: padEngines = $perPadEngine;
 
-    const ORBIT_R = 140;  // pad orbit radius
-    const DIAMOND_R = 52; // diamond orbit radius
+    const ORBIT_R = 120;
+    const DIAMOND_R = 48;
 
     // Position 8 pads in a circle
     function padPos(index: number) {
@@ -34,6 +35,11 @@
         selectVoice(index);
         triggerPad(index);
     }
+
+    function handlePadDblClick(e: MouseEvent, index: number) {
+        e.preventDefault();
+        togglePadEngine(index);
+    }
 </script>
 
 <div class="constellation">
@@ -43,13 +49,14 @@
             {@const pos = padPos(i)}
             {@const isSelected = selVoice === i}
             {@const isTriggered = triggered.has(i)}
+            {@const padEng = padEngines[i] ?? '808'}
             <button
                 class="pad"
                 class:selected={isSelected}
                 class:triggered={isTriggered}
                 style="
-                    left: calc(50% + {pos.x}px - 32px);
-                    top: calc(50% + {pos.y}px - 32px);
+                    left: calc(50% + {pos.x}px - 26px);
+                    top: calc(50% + {pos.y}px - 26px);
                     --voice-color: {voice.colour};
                     background: {isSelected || isTriggered
                         ? voice.colour
@@ -59,9 +66,11 @@
                     {isTriggered ? `box-shadow: 0 0 20px ${voice.colour}80; transform: scale(1.05);` : ''}
                 "
                 onclick={() => handlePadClick(i)}
+                ondblclick={(e) => handlePadDblClick(e, i)}
                 aria-label={voice.label}
             >
                 <span class="pad-label" style="color: {isSelected || isTriggered ? '#fff' : voice.colour + '88'}">{voice.label}</span>
+                <span class="engine-badge">{padEng === '909' ? '9' : '8'}</span>
             </button>
         {/each}
 
@@ -107,7 +116,7 @@
     }
     .pad {
         position: absolute;
-        width: 64px; height: 64px;
+        width: 52px; height: 52px;
         border-radius: 50%;
         border: none;
         cursor: pointer;
@@ -117,10 +126,19 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .pad-label {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
         letter-spacing: 0.5px;
         text-transform: uppercase;
+        pointer-events: none;
+    }
+    .engine-badge {
+        position: absolute;
+        top: 2px;
+        right: 6px;
+        font-size: 8px;
+        font-weight: 400;
+        color: rgba(255,255,255,0.4);
         pointer-events: none;
     }
     .diamond {

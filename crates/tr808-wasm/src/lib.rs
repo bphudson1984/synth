@@ -1,38 +1,50 @@
-use tr808_dsp::engine::{TR808, Voice};
+use tr808_dsp::engine::{TR808, Voice as Voice808};
+use tr909_dsp::engine::{TR909, Voice909};
 use tr808_dsp::sequencer::{Sequencer, SeqEvent};
 
-static mut ENGINE: Option<TR808> = None;
+static mut ENGINE_808: Option<TR808> = None;
+static mut ENGINE_909: Option<TR909> = None;
 static mut SEQ: Option<Sequencer> = None;
 static mut SEQ_EVENTS: Vec<SeqEvent> = Vec::new();
+// Per-track engine assignment: false=808, true=909
+static mut TRACK_ENGINE: [bool; 13] = [false; 13];
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
 static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
     unsafe {
-        ENGINE = Some(TR808::new(sample_rate));
+        ENGINE_808 = Some(TR808::new(sample_rate));
+        ENGINE_909 = Some(TR909::new(sample_rate));
         SEQ = Some(Sequencer::new(sample_rate));
         SEQ_EVENTS = Vec::with_capacity(16);
+        TRACK_ENGINE = [false; 13];
     }
 }
 
 #[no_mangle]
 pub extern "C" fn process(num_samples: u32) {
     unsafe {
-        let engine = ENGINE.as_mut().unwrap();
+        let e808 = ENGINE_808.as_mut().unwrap();
+        let e909 = ENGINE_909.as_mut().unwrap();
         let seq = SEQ.as_mut().unwrap();
         let n = (num_samples as usize).min(256);
         for i in 0..n {
-            // Sequencer fires triggers into the engine
             seq.process(&mut SEQ_EVENTS);
             for ev in &SEQ_EVENTS {
-                if let Some(voice) = Voice::from_u8(ev.voice) {
-                    engine.trigger(voice);
+                let track = ev.voice as usize;
+                if track < 13 && TRACK_ENGINE[track] {
+                    // 909
+                    if let Some(v) = Voice909::from_u8(ev.voice) { e909.trigger(v); }
+                } else {
+                    // 808
+                    if let Some(v) = Voice808::from_u8(ev.voice) { e808.trigger(v); }
                 }
             }
-            let mono = engine.process();
-            LEFT_BUF[i] = mono;
-            RIGHT_BUF[i] = mono;
+            // Mix both engines
+            let mono = e808.process() + e909.process();
+            LEFT_BUF[i] = mono.clamp(-1.0, 1.0);
+            RIGHT_BUF[i] = mono.clamp(-1.0, 1.0);
         }
     }
 }
@@ -50,10 +62,12 @@ pub extern "C" fn get_right_ptr() -> *const f32 {
 #[no_mangle]
 pub extern "C" fn trigger(voice_id: u8) {
     unsafe {
-        if let Some(engine) = ENGINE.as_mut() {
-            if let Some(voice) = Voice::from_u8(voice_id) {
-                engine.trigger(voice);
+        if voice_id >= 100 {
+            if let Some(e) = ENGINE_909.as_mut() {
+                if let Some(v) = Voice909::from_u8(voice_id - 100) { e.trigger(v); }
             }
+        } else if let Some(e) = ENGINE_808.as_mut() {
+            if let Some(v) = Voice808::from_u8(voice_id) { e.trigger(v); }
         }
     }
 }
@@ -61,44 +75,63 @@ pub extern "C" fn trigger(voice_id: u8) {
 #[no_mangle]
 pub extern "C" fn set_param(voice_id: u8, param_id: u8, value: f32) {
     unsafe {
-        let engine = match ENGINE.as_mut() { Some(e) => e, None => return };
-        match (voice_id, param_id) {
-            // BD: 0=level, 1=tone, 2=decay
-            (0, 0) => engine.bd.level = value,
-            (0, 1) => engine.bd.tone = value,
-            (0, 2) => engine.bd.decay = value,
-            // SD: 0=level, 1=tone, 2=snappy
-            (1, 0) => engine.sd.level = value,
-            (1, 1) => engine.sd.tone = value,
-            (1, 2) => engine.sd.snappy = value,
-            // LT/MT/HT: 0=level, 1=tuning
-            (2, 0) => engine.lt.level = value,
-            (2, 1) => engine.lt.tuning = value,
-            (3, 0) => engine.mt.level = value,
-            (3, 1) => engine.mt.tuning = value,
-            (4, 0) => engine.ht.level = value,
-            (4, 1) => engine.ht.tuning = value,
-            // RS: 0=level
-            (5, 0) => engine.rs.level = value,
-            // CP: 0=level
-            (6, 0) => engine.cp.level = value,
-            // CH: 0=level
-            (7, 0) => engine.ch.level = value,
-            // OH: 0=level, 1=decay
-            (8, 0) => engine.oh.level = value,
-            (8, 1) => engine.oh.decay = value,
-            // CY: 0=level, 1=decay
-            (9, 0) => engine.cy.level = value,
-            (9, 1) => engine.cy.decay = value,
-            // CB: 0=level
-            (10, 0) => engine.cb.level = value,
-            // MA: 0=level
-            (11, 0) => engine.ma.level = value,
-            // CL: 0=level
-            (12, 0) => engine.cl.level = value,
-            // Master volume
-            (255, 0) => engine.master_volume = value,
-            _ => {}
+        if voice_id >= 100 && voice_id < 200 {
+            // 909 params
+            let e = match ENGINE_909.as_mut() { Some(e) => e, None => return };
+            let v = voice_id - 100;
+            match (v, param_id) {
+                (0, 0) => e.bd.level = value,
+                (0, 1) => e.bd.tone = value,
+                (0, 2) => e.bd.decay = value,
+                (1, 0) => e.sd.level = value,
+                (1, 1) => e.sd.tone = value,
+                (1, 2) => e.sd.snappy = value,
+                (2, 0) => e.lt.level = value,
+                (2, 1) => e.lt.tuning = value,
+                (3, 0) => e.mt.level = value,
+                (3, 1) => e.mt.tuning = value,
+                (4, 0) => e.ht.level = value,
+                (4, 1) => e.ht.tuning = value,
+                (5, 0) => e.rs.level = value,
+                (6, 0) => e.cp.level = value,
+                (7, 0) => e.ch.level = value,
+                (8, 0) => e.oh.level = value,
+                (8, 1) => e.oh.decay = value,
+                (9, 0) => e.cc.level = value,
+                (9, 1) => e.cc.decay = value,
+                (10, 0) => e.rc.level = value,
+                (10, 1) => e.rc.decay = value,
+                _ => {}
+            }
+        } else {
+            // 808 params
+            let e = match ENGINE_808.as_mut() { Some(e) => e, None => return };
+            match (voice_id, param_id) {
+                (0, 0) => e.bd.level = value,
+                (0, 1) => e.bd.tone = value,
+                (0, 2) => e.bd.decay = value,
+                (1, 0) => e.sd.level = value,
+                (1, 1) => e.sd.tone = value,
+                (1, 2) => e.sd.snappy = value,
+                (2, 0) => e.lt.level = value,
+                (2, 1) => e.lt.tuning = value,
+                (3, 0) => e.mt.level = value,
+                (3, 1) => e.mt.tuning = value,
+                (4, 0) => e.ht.level = value,
+                (4, 1) => e.ht.tuning = value,
+                (5, 0) => e.rs.level = value,
+                (6, 0) => e.cp.level = value,
+                (7, 0) => e.ch.level = value,
+                (8, 0) => e.oh.level = value,
+                (8, 1) => e.oh.decay = value,
+                (9, 0) => e.cy.level = value,
+                (9, 1) => e.cy.decay = value,
+                (10, 0) => e.cb.level = value,
+                (11, 0) => e.ma.level = value,
+                (12, 0) => e.cl.level = value,
+                (255, 0) => { e.master_volume = value; ENGINE_909.as_mut().unwrap().master_volume = value; },
+                _ => {}
+            }
         }
     }
 }
@@ -173,4 +206,22 @@ pub extern "C" fn seq_clear() {
 #[no_mangle]
 pub extern "C" fn seq_set_length(length: u8) {
     unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_length(length as usize); } }
+}
+
+/// Set which engine a track uses: 0=808, 1=909
+#[no_mangle]
+pub extern "C" fn set_track_engine(track: u8, is_909: u8) {
+    unsafe {
+        if (track as usize) < 13 {
+            TRACK_ENGINE[track as usize] = is_909 != 0;
+        }
+    }
+}
+
+/// Set ALL tracks to one engine: 0=808, 1=909
+#[no_mangle]
+pub extern "C" fn set_all_engines(is_909: u8) {
+    unsafe {
+        for t in &mut TRACK_ENGINE { *t = is_909 != 0; }
+    }
 }

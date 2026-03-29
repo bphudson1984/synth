@@ -3,6 +3,7 @@
 pub mod svfilter;
 pub mod ad_envelope;
 pub mod pitch_envelope;
+pub mod bitcrusher;
 
 use std::f32::consts::PI;
 
