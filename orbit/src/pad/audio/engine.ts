@@ -9,6 +9,9 @@ export class ProphetEngine {
         const ctx = await getAudioContext();
 
         const wasmResponse = await fetch(import.meta.env.BASE_URL + 'prophet-dsp.wasm');
+        if (!wasmResponse.ok) {
+            throw new Error(`Failed to fetch prophet-dsp.wasm: ${wasmResponse.status} ${wasmResponse.statusText}`);
+        }
         const wasmBytes = await wasmResponse.arrayBuffer();
 
         await ctx.audioWorklet.addModule(import.meta.env.BASE_URL + 'prophet-worklet.js');
