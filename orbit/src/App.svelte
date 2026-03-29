@@ -48,6 +48,7 @@
     :global(:root) {
         --orbit-surface: #111;
         --orbit-well: #1a1a1a;
+        --orbit-well-bright: #262626;
         --orbit-canvas: #0a0a0a;
         --orbit-ink: #eee;
         --orbit-label: #aaa;
