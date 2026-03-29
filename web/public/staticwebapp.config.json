@@ -1,7 +1,7 @@
 {
     "navigationFallback": {
         "rewrite": "/index.html",
-        "exclude": ["/assets/*", "**/*.wasm", "**/*.js"]
+        "exclude": ["/assets/*", "*.wasm", "*.js"]
     },
     "mimeTypes": {
         ".wasm": "application/wasm"
