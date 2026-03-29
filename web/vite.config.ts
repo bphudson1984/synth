@@ -5,5 +5,5 @@ export default defineConfig({
     plugins: [svelte()],
     root: '.',
     publicDir: 'public',
-    base: '/prophet/',
+    base: '/',
 });
