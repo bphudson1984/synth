@@ -93,3 +93,34 @@ pub extern "C" fn seq_set_step_notes(step: u8, num: u8, n1: u8, n2: u8, n3: u8, 
 pub extern "C" fn seq_set_step_gate(step: u8, gate: u8) {
     unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].gate = gate != 0; } } }
 }
+
+// Per-step parameter setters
+#[no_mangle] pub extern "C" fn seq_set_step_velocity(step: u8, vel: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].velocity = vel; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_gate_pct(step: u8, pct: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].gate_pct = pct; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_probability(step: u8, prob: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].probability = prob; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_ratchet(step: u8, count: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].ratchet = count.clamp(1, 4); } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_skip(step: u8, skip: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].skip = skip != 0; } } }
+}
+
+// Pattern-level setters
+#[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.direction = dir; } }
+}
+#[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.swing = swing.clamp(0.0, 1.0); } }
+}
+#[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_time_div(div); } }
+}
+#[no_mangle] pub extern "C" fn seq_rotate(dir: i32) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.rotate(dir); } }
+}

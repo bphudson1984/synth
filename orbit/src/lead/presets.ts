@@ -10,9 +10,13 @@ export interface LeadPreset {
     release: number;
 }
 
-function n(note: number, label: string): SeqStep { return { notes: [note], gate: true, label }; }
-function c(notes: number[], label: string): SeqStep { return { notes, gate: true, label }; }
-const R: SeqStep = { notes: [48], gate: false, label: '' };
+function n(note: number, label: string): SeqStep {
+    return { notes: [note], gate: true, label, velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false };
+}
+function c(notes: number[], label: string): SeqStep {
+    return { notes, gate: true, label, velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false };
+}
+const R: SeqStep = { notes: [48], gate: false, label: '', velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false };
 
 export const LEAD_PRESETS: LeadPreset[] = [
     {

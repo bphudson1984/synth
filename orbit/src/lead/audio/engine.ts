@@ -45,6 +45,15 @@ export class BraidsEngine {
         });
     }
     setStepGate(step: number, gate: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-gate', step, gate }); }
+    setStepVelocity(step: number, vel: number) { this.node?.port.postMessage({ type: 'seq-set-step-velocity', step, value: vel }); }
+    setStepGatePct(step: number, pct: number) { this.node?.port.postMessage({ type: 'seq-set-step-gate-pct', step, value: pct }); }
+    setStepProbability(step: number, prob: number) { this.node?.port.postMessage({ type: 'seq-set-step-probability', step, value: prob }); }
+    setStepRatchet(step: number, count: number) { this.node?.port.postMessage({ type: 'seq-set-step-ratchet', step, value: count }); }
+    setStepSkip(step: number, skip: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-skip', step, value: skip }); }
+    setDirection(dir: number) { this.node?.port.postMessage({ type: 'seq-set-direction', value: dir }); }
+    setSwing(swing: number) { this.node?.port.postMessage({ type: 'seq-set-swing', value: swing }); }
+    setTimeDivision(div: number) { this.node?.port.postMessage({ type: 'seq-set-time-div', value: div }); }
+    seqRotate(dir: number) { this.node?.port.postMessage({ type: 'seq-rotate', value: dir }); }
     setSeqExternal(ext: boolean) { this.node?.port.postMessage({ type: 'seq-set-external', value: ext }); }
     setSeqLength(len: number) { this.node?.port.postMessage({ type: 'seq-set-length', value: len }); }
 }

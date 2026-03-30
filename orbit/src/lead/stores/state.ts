@@ -140,13 +140,16 @@ export function triggerPad(padIndex: number) {
 }
 
 // --- Sequencer (WASM-side, sample-accurate) ---
-export interface SeqStep { notes: number[]; gate: boolean; label: string; }
+export interface SeqStep {
+    notes: number[]; gate: boolean; label: string;
+    velocity: number; gatePct: number; probability: number; ratchet: number; skip: boolean;
+}
 
 const PAGE_SIZE = 16;
 const MAX_PAGES = 8;
 
 export const seqSteps = writable<SeqStep[]>(
-    Array.from({ length: PAGE_SIZE }, () => ({ notes: [48], gate: false, label: '' }))
+    Array.from({ length: PAGE_SIZE }, () => ({ notes: [48], gate: false, label: '', velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false }))
 );
 export const seqNumPages = writable(1);
 export const seqCurrentPage = writable(0);
@@ -159,7 +162,7 @@ export function addSeqPage() {
     seqNumPages.set(pages + 1);
     seqSteps.update(s => {
         for (let i = 0; i < PAGE_SIZE; i++) {
-            s.push({ notes: [48], gate: false, label: '' });
+            s.push({ notes: [48], gate: false, label: '', velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false });
         }
         return [...s];
     });
@@ -204,8 +207,76 @@ export function clearSelectedStep() {
     engine?.setStepGate(step, false);
 }
 
+// --- Seq pattern settings ---
+export const seqDirection = writable(0);  // 0=fwd, 1=rev, 2=ping, 3=rnd
+export const seqSwing = writable(0);      // 0-100
+export const seqTimeDivision = writable(2); // 0=1/4, 1=1/8, 2=1/16, 3=1/32
+export const seqSettingsOpen = writable(false);
+export const stepSettingsOpen = writable(false);
+
+export function toggleSeqSettings() {
+    seqSettingsOpen.update(v => { if (!v) { stepSettingsOpen.set(false); arpSettingsOpen.set(false); } return !v; });
+}
+export function toggleStepSettings() {
+    stepSettingsOpen.update(v => { if (!v) { seqSettingsOpen.set(false); arpSettingsOpen.set(false); } return !v; });
+}
+export function setSeqDirection(dir: number) { seqDirection.set(dir); engine?.setDirection(dir); }
+export function setSeqSwing(val: number) { seqSwing.set(val); engine?.setSwing(val / 100); }
+export function setSeqTimeDivision(div: number) { seqTimeDivision.set(div); engine?.setTimeDivision(div); }
+export function rotatePattern(dir: number) {
+    engine?.seqRotate(dir);
+    // Sync the local step data
+    seqSteps.update(s => {
+        const len = s.length;
+        const buf = [...s];
+        for (let i = 0; i < len; i++) {
+            const src = dir > 0 ? (i === 0 ? len - 1 : i - 1) : (i + 1) % len;
+            s[i] = buf[src];
+        }
+        return [...s];
+    });
+}
+export function randomizeGates() {
+    seqSteps.update(s => {
+        for (let i = 0; i < s.length; i++) {
+            if (s[i].gate) {
+                s[i].probability = 30 + Math.floor(Math.random() * 70);
+                engine?.setStepProbability(i, s[i].probability);
+            }
+        }
+        return [...s];
+    });
+}
+
+// --- Per-step editing ---
+export function setStepVelocity(val: number) {
+    const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].velocity = val; return [...s]; });
+    engine?.setStepVelocity(step, Math.round(val * 1.27)); // 0-100 → 0-127
+}
+export function setStepGatePct(val: number) {
+    const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
+    engine?.setStepGatePct(step, val);
+}
+export function setStepProbability(val: number) {
+    const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].probability = val; return [...s]; });
+    engine?.setStepProbability(step, val);
+}
+export function setStepRatchet(val: number) {
+    const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].ratchet = val; return [...s]; });
+    engine?.setStepRatchet(step, val);
+}
+export function toggleStepSkip() {
+    const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].skip = !s[step].skip; return [...s]; });
+    engine?.setStepSkip(step, get(seqSteps)[step].skip);
+}
+
 export function clearSequence() {
-    const emptySteps = Array.from({ length: PAGE_SIZE }, (): SeqStep => ({ notes: [48], gate: false, label: '' }));
+    const emptySteps = Array.from({ length: PAGE_SIZE }, (): SeqStep => ({ notes: [48], gate: false, label: '', velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false }));
     seqSteps.set(emptySteps);
     seqNumPages.set(1);
     seqCurrentPage.set(0);
@@ -253,7 +324,7 @@ export function moveStep(fromIdx: number, toIdx: number) {
         const totalSteps = s.length;
         if (fromIdx < 0 || fromIdx >= totalSteps || toIdx < 0 || toIdx >= totalSteps) return s;
         const moved = { ...s[fromIdx] };
-        s[fromIdx] = { notes: [48], gate: false, label: '' };
+        s[fromIdx] = { notes: [48], gate: false, label: '', velocity: 100, gatePct: 75, probability: 100, ratchet: 1, skip: false };
         s[toIdx] = moved;
         return [...s];
     });
@@ -293,7 +364,9 @@ export function setArpDivision(div: ArpDivision) {
     if (arpTimerId && arpNotes.length > 0) restartArpTimer();
 }
 export function setArpOctaves(oct: number) { arpOctaves.set(oct); }
-export function toggleArpSettings() { arpSettingsOpen.update(v => !v); }
+export function toggleArpSettings() {
+    arpSettingsOpen.update(v => { if (!v) { seqSettingsOpen.set(false); stepSettingsOpen.set(false); } return !v; });
+}
 
 function startArp(notes: number[]) {
     stopArp();

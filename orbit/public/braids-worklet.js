@@ -49,6 +49,33 @@ class BraidsProcessor extends AudioWorkletProcessor {
             case 'seq-set-length':
                 if (this.ready) this.wasm.seq_set_length(data.value);
                 break;
+            case 'seq-set-step-velocity':
+                if (this.ready) this.wasm.seq_set_step_velocity(data.step, data.value);
+                break;
+            case 'seq-set-step-gate-pct':
+                if (this.ready) this.wasm.seq_set_step_gate_pct(data.step, data.value);
+                break;
+            case 'seq-set-step-probability':
+                if (this.ready) this.wasm.seq_set_step_probability(data.step, data.value);
+                break;
+            case 'seq-set-step-ratchet':
+                if (this.ready) this.wasm.seq_set_step_ratchet(data.step, data.value);
+                break;
+            case 'seq-set-step-skip':
+                if (this.ready) this.wasm.seq_set_step_skip(data.step, data.value ? 1 : 0);
+                break;
+            case 'seq-set-direction':
+                if (this.ready) this.wasm.seq_set_direction(data.value);
+                break;
+            case 'seq-set-swing':
+                if (this.ready) this.wasm.seq_set_swing(data.value);
+                break;
+            case 'seq-set-time-div':
+                if (this.ready) this.wasm.seq_set_time_div(data.value);
+                break;
+            case 'seq-rotate':
+                if (this.ready) this.wasm.seq_rotate(data.value);
+                break;
             case 'seq-set-external':
                 if (this.ready) this.wasm.seq_set_external(data.value ? 1 : 0);
                 break;

@@ -101,18 +101,18 @@ impl BraidsSynth {
         // When seq_external is true, sequencer still ticks for step reporting
         // but we don't play notes — JS arp handles playback
         if !self.seq_external {
-            let mut seq_note_on: Option<u8> = None;
+            let mut seq_note_on: Option<(u8, u8)> = None;
             let mut seq_note_off = false;
             for i in 0..self.events.len() {
                 match &self.events[i] {
-                    LeadSeqEvent::NoteOn { notes, num_notes } => {
-                        if *num_notes > 0 { seq_note_on = Some(notes[0]); }
+                    LeadSeqEvent::NoteOn { notes, num_notes, velocity } => {
+                        if *num_notes > 0 { seq_note_on = Some((notes[0], *velocity)); }
                     }
                     LeadSeqEvent::NoteOff => seq_note_off = true,
                 }
             }
             if seq_note_off { let n = self.current_note; self.note_off(n); }
-            if let Some(note) = seq_note_on { self.note_on(note, 100); }
+            if let Some((note, vel)) = seq_note_on { self.note_on(note, vel); }
         }
 
         if !self.gate && !self.amp_env.is_active() {

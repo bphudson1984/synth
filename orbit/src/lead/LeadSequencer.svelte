@@ -167,12 +167,19 @@
                             class:selected={sel === globalIdx}
                             class:playhead={playing && cur === globalIdx}
                             class:drag-source={dragFrom === globalIdx}
+                            class:skipped={step?.skip && step?.gate}
+                            class:low-prob={step?.gate && step?.probability < 80}
                             data-idx={globalIdx}
                             onclick={() => handleStepClick(globalIdx)}
                             ondblclick={() => handleStepDblClick(globalIdx)}
                             onpointerdown={(e) => onCellPointerDown(e, globalIdx)}
                         >
-                            {#if step?.gate}<span class="note-label">{step.label || noteName(step.notes[0])}</span>{/if}
+                            {#if step?.gate}
+                                <span class="note-label">{step.label || noteName(step.notes[0])}</span>
+                                {#if step.ratchet > 1}
+                                    <span class="ratchet-dots">{'•'.repeat(step.ratchet)}</span>
+                                {/if}
+                            {/if}
                         </button>
                     {/each}
                 </div>
@@ -234,7 +241,10 @@
     .cell.playhead:not(.active) { background: var(--orbit-well-bright, #262626); }
     .cell.playhead::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--orbit-ink); }
     .cell.drag-source { opacity: 0.3; }
+    .cell.skipped { opacity: 0.35; text-decoration: line-through; }
+    .cell.low-prob { border-style: dashed; }
     .note-label { font-size: 9px; font-weight: 500; color: var(--orbit-ink); pointer-events: none; letter-spacing: 0.3px; }
+    .ratchet-dots { position: absolute; bottom: 1px; font-size: 6px; color: var(--lead-colour); pointer-events: none; line-height: 1; }
     .drag-ghost {
         position: fixed;
         pointer-events: none;
