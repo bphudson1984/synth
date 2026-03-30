@@ -5,6 +5,7 @@ export class BraidsEngine {
     private panner: StereoPannerNode | null = null;
     private _ready = false;
     get ready() { return this._ready; }
+    onStep: ((step: number) => void) | null = null;
 
     async init(): Promise<void> {
         const ctx = await getAudioContext();
@@ -19,6 +20,7 @@ export class BraidsEngine {
             this.node!.port.onmessage = (e) => {
                 if (e.data.type === 'ready') { clearTimeout(timeout); this._ready = true; resolve(); }
                 if (e.data.type === 'error') { clearTimeout(timeout); reject(new Error(e.data.message)); }
+                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
             this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes }, [wasmBytes]);
         });
@@ -31,6 +33,20 @@ export class BraidsEngine {
     noteOn(note: number, velocity: number) { this.node?.port.postMessage({ type: 'note-on', note, velocity }); }
     noteOff(note: number) { this.node?.port.postMessage({ type: 'note-off', note }); }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
+
+    seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
+    seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
+    seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
+    seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
+    setStepNotes(step: number, notes: number[]) {
+        this.node?.port.postMessage({
+            type: 'seq-set-step-notes', step,
+            num: notes.length, n1: notes[0] ?? 0, n2: notes[1] ?? 0, n3: notes[2] ?? 0, n4: notes[3] ?? 0,
+        });
+    }
+    setStepGate(step: number, gate: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-gate', step, gate }); }
+    setSeqExternal(ext: boolean) { this.node?.port.postMessage({ type: 'seq-set-external', value: ext }); }
+    setSeqLength(len: number) { this.node?.port.postMessage({ type: 'seq-set-length', value: len }); }
 }
 
 export const PARAM = {

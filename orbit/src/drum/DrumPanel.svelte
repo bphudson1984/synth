@@ -9,6 +9,7 @@
     import { PRESETS } from './presets';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
+    import PlayControls from '../shared/components/PlayControls.svelte';
     import StepSequencer from './StepSequencer.svelte';
     import Transport from './Transport.svelte';
 
@@ -57,6 +58,7 @@
     onParamSelect={selectParam}
     {badge}
 />
+<PlayControls />
 <Slider
     label={selParam}
     value={sliderVal}

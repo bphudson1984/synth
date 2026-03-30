@@ -5,3 +5,4 @@ pub mod envelope;
 pub mod lfo;
 pub mod filter;
 pub mod glide;
+pub mod sequencer;

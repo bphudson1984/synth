@@ -1,4 +1,5 @@
 use braids_dsp::engine::BraidsSynth;
+use braids_dsp::sequencer::MAX_STEPS;
 
 static mut ENGINE: Option<BraidsSynth> = None;
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
@@ -62,4 +63,33 @@ pub extern "C" fn set_param(id: u8, value: f32) {
             _ => {}
         }
     }
+}
+
+// --- Sequencer ---
+#[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.play(); } } }
+#[no_mangle] pub extern "C" fn seq_stop() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.stop(); } } }
+#[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_bpm(bpm); } } }
+#[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(e) = ENGINE.as_ref() { e.sequencer.current_step() as u8 } else { 0 } } }
+#[no_mangle] pub extern "C" fn seq_clear() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.clear(); } } }
+#[no_mangle] pub extern "C" fn seq_set_external(ext: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.seq_external = ext != 0; } } }
+#[no_mangle] pub extern "C" fn seq_set_length(len: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_length(len as usize); } } }
+
+/// Set notes for a step. note1 is always set; note2-4 are 0 if unused.
+#[no_mangle]
+pub extern "C" fn seq_set_step_notes(step: u8, num: u8, n1: u8, n2: u8, n3: u8, n4: u8) {
+    unsafe {
+        if let Some(e) = ENGINE.as_mut() {
+            let s = step as usize;
+            if s < MAX_STEPS {
+                e.sequencer.steps[s].notes = [n1, n2, n3, n4];
+                e.sequencer.steps[s].num_notes = num.min(4);
+                e.sequencer.steps[s].gate = true;
+            }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_step_gate(step: u8, gate: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < MAX_STEPS { e.sequencer.steps[s].gate = gate != 0; } } }
 }

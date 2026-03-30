@@ -8,6 +8,7 @@
     } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
+    import PlayControls from '../shared/components/PlayControls.svelte';
 
     $: selChord = $selectedChord;
     $: selParam = $selectedPadParam;
@@ -46,6 +47,7 @@
         onPadClick={handlePadClick}
         onParamSelect={selectPadParam}
     />
+    <PlayControls />
     <Slider
         label={selParam}
         value={sliderVal}

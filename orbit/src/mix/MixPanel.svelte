@@ -1,5 +1,6 @@
 <script lang="ts">
     import { channels, setVolume, setPan, toggleMute, toggleSolo, type ChannelId } from '../shared/stores/mixer';
+    import PlayControls from '../shared/components/PlayControls.svelte';
 
     $: ch = $channels;
 
@@ -82,6 +83,7 @@
             </div>
         {/each}
     </div>
+    <PlayControls />
 </div>
 
 <style>

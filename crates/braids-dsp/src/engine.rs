@@ -5,6 +5,7 @@ use crate::envelope::Envelope;
 use crate::lfo::Lfo;
 use crate::filter::LadderFilter;
 use crate::glide::Glide;
+use crate::sequencer::{LeadSequencer, LeadSeqEvent};
 
 pub struct BraidsSynth {
     macro_osc: MacroOscillator,
@@ -13,6 +14,8 @@ pub struct BraidsSynth {
     pub filter_env: Envelope,
     lfo: Lfo,
     glide: Glide,
+    pub sequencer: LeadSequencer,
+    events: Vec<LeadSeqEvent>,
     sample_rate: f32,
 
     current_note: u8,
@@ -27,6 +30,7 @@ pub struct BraidsSynth {
     pub lfo_amount: f32,
     pub lfo_dest: u8,
     pub master_volume: f32,
+    pub seq_external: bool, // when true, sequencer ticks but engine doesn't play its notes
 }
 
 impl BraidsSynth {
@@ -38,12 +42,14 @@ impl BraidsSynth {
             filter_env: Envelope::new(sample_rate),
             lfo: Lfo::new(sample_rate),
             glide: Glide::new(),
+            sequencer: LeadSequencer::new(sample_rate),
+            events: Vec::with_capacity(4),
             sample_rate,
             current_note: 0, gate: false, velocity: 0.8,
             timbre: 0.5, color: 0.5,
             filter_cutoff: 8000.0, filter_resonance: 0.2, filter_env_amt: 3000.0,
             lfo_amount: 0.0, lfo_dest: 0,
-            master_volume: 0.6,
+            master_volume: 0.6, seq_external: false,
         };
         s.amp_env.set_attack(0.005);
         s.amp_env.set_decay(0.2);
@@ -60,17 +66,11 @@ impl BraidsSynth {
         self.macro_osc.set_mode(OscMode::from_u8(mode_id));
     }
 
-    pub fn set_lfo_rate(&mut self, hz: f32) {
-        self.lfo.set_frequency(hz);
-    }
+    pub fn set_lfo_rate(&mut self, hz: f32) { self.lfo.set_frequency(hz); }
 
     pub fn set_glide_time(&mut self, secs: f32) {
-        if secs > 0.001 {
-            self.glide.set_enabled(true);
-            self.glide.set_rate(secs);
-        } else {
-            self.glide.set_enabled(false);
-        }
+        if secs > 0.001 { self.glide.set_enabled(true); self.glide.set_rate(secs); }
+        else { self.glide.set_enabled(false); }
     }
 
     pub fn note_on(&mut self, note: u8, velocity: u8) {
@@ -95,6 +95,26 @@ impl BraidsSynth {
     }
 
     pub fn process(&mut self) -> f32 {
+        // Process sequencer events
+        self.events.clear();
+        self.sequencer.process(&mut self.events);
+        // When seq_external is true, sequencer still ticks for step reporting
+        // but we don't play notes — JS arp handles playback
+        if !self.seq_external {
+            let mut seq_note_on: Option<u8> = None;
+            let mut seq_note_off = false;
+            for i in 0..self.events.len() {
+                match &self.events[i] {
+                    LeadSeqEvent::NoteOn { notes, num_notes } => {
+                        if *num_notes > 0 { seq_note_on = Some(notes[0]); }
+                    }
+                    LeadSeqEvent::NoteOff => seq_note_off = true,
+                }
+            }
+            if seq_note_off { let n = self.current_note; self.note_off(n); }
+            if let Some(note) = seq_note_on { self.note_on(note, 100); }
+        }
+
         if !self.gate && !self.amp_env.is_active() {
             return 0.0;
         }
