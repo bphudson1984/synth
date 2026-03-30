@@ -14,12 +14,14 @@ export function setLeadEngine(e: BraidsEngine) {
     engine = e;
     e.onStep = (step) => {
         seqCurrentStep.set(step);
-        // When arp is active, feed sequencer chord into the running arp
         if (get(arpMode) !== 'off') {
+            // Feed sequencer chord into the arp
             const steps = get(seqSteps);
             if (steps[step]?.gate && steps[step].notes.length > 0) {
                 updateArpChord(steps[step].notes);
             }
+            // Clock the arp from the sequencer step
+            arpOnStep();
         }
     };
     registerMixerCallback('lead',
@@ -35,7 +37,6 @@ export function setLeadEngine(e: BraidsEngine) {
                 const steps = get(seqSteps);
                 const first = steps.find(s => s.gate && s.notes.length > 0);
                 if (first) startArp(first.notes);
-                else ensureArpRunning();
             }
         },
         stop: () => {
@@ -52,7 +53,6 @@ export function setLeadEngine(e: BraidsEngine) {
             const steps = get(seqSteps);
             const first = steps.find(s => s.gate && s.notes.length > 0);
             if (first && arpNotes.length === 0) startArp(first.notes);
-            else ensureArpRunning();
         } else if (!playing) {
             engine?.setSeqExternal(false);
             stopArp();
@@ -338,35 +338,81 @@ export function moveStep(fromIdx: number, toIdx: number) {
     }
 }
 
-// --- Arpeggiator (JS-side) ---
+// --- Arpeggiator (clocked by WASM sequencer steps, not setInterval) ---
 export const arpMode = writable<ArpMode>('off');
 export const arpDivision = writable<ArpDivision>('1/8');
 export const arpOctaves = writable(1);
 export const arpSettingsOpen = writable(false);
 
-let arpTimerId: ReturnType<typeof setInterval> | null = null;
+let arpRunning = false;
 let arpNotes: number[] = [];
 let arpIndex = 0;
 let arpDirection = 1;
 let arpOctave = 0;
+let arpStepCounter = 0; // counts sequencer steps to determine when to tick
+
+// How many sequencer steps per arp tick, based on seq time_div and arp division
+// Both are relative to the beat. Seq time_div: 0=1/4, 1=1/8, 2=1/16, 3=1/32
+// Arp division: '1/4', '1/8', '1/16', '1/32'
+function getArpStepsPerTick(): number {
+    const seqDiv = get(seqTimeDivision);
+    // Sequencer steps per quarter note
+    const seqPerQuarter = seqDiv === 0 ? 1 : seqDiv === 1 ? 2 : seqDiv === 3 ? 8 : 4;
+    const arpDiv = get(arpDivision);
+    // Arp ticks per quarter note
+    const arpPerQuarter = arpDiv === '1/4' ? 1 : arpDiv === '1/8' ? 2 : arpDiv === '1/16' ? 4 : 8;
+    // Steps per arp tick (can be fractional for fast arps)
+    return seqPerQuarter / arpPerQuarter;
+}
+
+// Called from onStep — this is the master clock
+function arpOnStep() {
+    if (!arpRunning || arpNotes.length === 0) return;
+    const stepsPerTick = getArpStepsPerTick();
+
+    if (stepsPerTick >= 1) {
+        // Arp is slower than or equal to sequencer rate
+        arpStepCounter++;
+        if (arpStepCounter >= stepsPerTick) {
+            arpStepCounter = 0;
+            arpTick();
+        }
+    } else {
+        // Arp is faster than sequencer — multiple ticks per step
+        const ticksPerStep = Math.round(1 / stepsPerTick);
+        for (let i = 0; i < ticksPerStep; i++) {
+            arpTick();
+        }
+    }
+}
 
 export function setArpMode(mode: ArpMode) {
     arpMode.set(mode);
     if (mode === 'off') {
         stopArp();
-        engine?.setSeqExternal(false); // sequencer plays notes directly
+        engine?.setSeqExternal(false);
     } else {
-        engine?.setSeqExternal(true); // sequencer only reports steps, arp plays notes
+        engine?.setSeqExternal(true);
+        if (get(isPlaying)) {
+            const steps = get(seqSteps);
+            const first = steps.find(s => s.gate && s.notes.length > 0);
+            if (first) startArp(first.notes);
+        }
     }
 }
 export function setArpDivision(div: ArpDivision) {
     arpDivision.set(div);
-    if (arpTimerId && arpNotes.length > 0) restartArpTimer();
+    arpStepCounter = 0; // reset counter so new division takes effect immediately
 }
-export function setArpOctaves(oct: number) { arpOctaves.set(oct); }
+export function setArpOctaves(oct: number) {
+    arpOctaves.set(oct);
+    if (arpOctave >= oct) arpOctave = 0;
+}
 export function toggleArpSettings() {
     arpSettingsOpen.update(v => { if (!v) { seqSettingsOpen.set(false); stepSettingsOpen.set(false); } return !v; });
 }
+
+let arpLiveTimerId: ReturnType<typeof setInterval> | null = null;
 
 function startArp(notes: number[]) {
     stopArp();
@@ -374,43 +420,36 @@ function startArp(notes: number[]) {
     arpIndex = 0;
     arpDirection = 1;
     arpOctave = 0;
+    arpStepCounter = 0;
+    arpRunning = true;
     arpTick();
-    arpTimerId = setInterval(() => arpTick(), getArpIntervalMs());
+    // In live mode (not playing), use a timer since there's no sequencer clock
+    if (!get(isPlaying)) {
+        const q = 60000 / get(bpm);
+        const div = get(arpDivision);
+        const ms = div === '1/4' ? q : div === '1/8' ? q / 2 : div === '1/16' ? q / 4 : q / 8;
+        arpLiveTimerId = setInterval(() => arpTick(), ms);
+    }
 }
 
 function updateArpChord(notes: number[]) {
-    const wasEmpty = arpNotes.length === 0;
     arpNotes = [...notes].sort((a, b) => a - b);
     if (arpIndex >= arpNotes.length) arpIndex = 0;
-    // If arp timer is running but had no notes, kick it
-    if (wasEmpty && arpNotes.length > 0 && arpTimerId) {
+    if (!arpRunning && arpNotes.length > 0) {
+        arpRunning = true;
+        arpStepCounter = 0;
         arpTick();
     }
 }
 
 function stopArp() {
-    if (arpTimerId) { clearInterval(arpTimerId); arpTimerId = null; }
+    arpRunning = false;
+    if (arpLiveTimerId) { clearInterval(arpLiveTimerId); arpLiveTimerId = null; }
     releaseAll();
     arpNotes = [];
     arpIndex = 0;
     arpOctave = 0;
-}
-
-function ensureArpRunning() {
-    if (get(arpMode) === 'off') return;
-    if (!arpTimerId) {
-        arpTimerId = setInterval(() => arpTick(), getArpIntervalMs());
-    }
-}
-
-function getArpIntervalMs(): number {
-    const q = 60000 / get(bpm);
-    switch (get(arpDivision)) {
-        case '1/4': return q;
-        case '1/8': return q / 2;
-        case '1/16': return q / 4;
-        case '1/32': return q / 8;
-    }
+    arpStepCounter = 0;
 }
 
 function arpTick() {

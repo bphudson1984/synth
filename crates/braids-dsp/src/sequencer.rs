@@ -42,6 +42,7 @@ pub struct LeadSequencer {
     gate_active: bool,
     gate_samples: f32,
     gate_counter: f32,
+    trigger_pending: bool,
     // Ratchet state
     ratchet_count: u8,
     ratchet_idx: u8,
@@ -67,6 +68,7 @@ impl LeadSequencer {
             state: PlayState::Stopped, current_step: 0,
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
+            trigger_pending: false,
             ratchet_count: 0, ratchet_idx: 0, ratchet_samples: 0.0,
             ratchet_counter: 0.0, ratchet_step: Step::default(),
             direction: 0, swing: 0.0, time_div: 2, // default 1/16
@@ -83,6 +85,7 @@ impl LeadSequencer {
         self.sample_counter = 0.0;
         self.gate_active = false;
         self.gate_counter = 0.0;
+        self.trigger_pending = true; // fire step 0 immediately
         self.ratchet_count = 0;
         self.ping_dir = 1;
         self.step_is_even = false;
@@ -216,10 +219,19 @@ impl LeadSequencer {
             }
         }
 
-        // Step boundary
-        self.sample_counter += 1.0;
-        if self.sample_counter >= self.effective_step_samples() {
-            self.sample_counter -= self.effective_step_samples();
+        // Immediate trigger on play (step 0)
+        let mut should_trigger = self.trigger_pending;
+        self.trigger_pending = false;
+
+        if !should_trigger {
+            self.sample_counter += 1.0;
+            if self.sample_counter >= self.effective_step_samples() {
+                self.sample_counter -= self.effective_step_samples();
+                should_trigger = true;
+            }
+        }
+
+        if should_trigger {
             self.trigger_current_step(events);
             self.advance_step();
         }
