@@ -5,7 +5,7 @@ use crate::envelope::Envelope;
 use crate::lfo::Lfo;
 use crate::filter::LadderFilter;
 use crate::glide::Glide;
-use crate::sequencer::{LeadSequencer, LeadSeqEvent};
+use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent};
 
 pub struct BraidsSynth {
     macro_osc: MacroOscillator,
@@ -14,11 +14,11 @@ pub struct BraidsSynth {
     pub filter_env: Envelope,
     lfo: Lfo,
     glide: Glide,
-    pub sequencer: LeadSequencer,
-    events: Vec<LeadSeqEvent>,
+    pub sequencer: NoteSequencer,
+    events: Vec<NoteSeqEvent>,
     sample_rate: f32,
 
-    current_note: u8,
+    pub current_note: u8,
     gate: bool,
     velocity: f32,
 
@@ -42,7 +42,7 @@ impl BraidsSynth {
             filter_env: Envelope::new(sample_rate),
             lfo: Lfo::new(sample_rate),
             glide: Glide::new(),
-            sequencer: LeadSequencer::new(sample_rate),
+            sequencer: NoteSequencer::new(sample_rate),
             events: Vec::with_capacity(4),
             sample_rate,
             current_note: 0, gate: false, velocity: 0.8,
@@ -105,10 +105,10 @@ impl BraidsSynth {
             let mut seq_note_off = false;
             for i in 0..self.events.len() {
                 match &self.events[i] {
-                    LeadSeqEvent::NoteOn { notes, num_notes, velocity } => {
+                    NoteSeqEvent::NoteOn { notes, num_notes, velocity } => {
                         if *num_notes > 0 { seq_note_on = Some((notes[0], *velocity)); }
                     }
-                    LeadSeqEvent::NoteOff => seq_note_off = true,
+                    NoteSeqEvent::NoteOff => seq_note_off = true,
                 }
             }
             if seq_note_off { let n = self.current_note; self.note_off(n); }

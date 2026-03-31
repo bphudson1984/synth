@@ -7,6 +7,7 @@ import {
 } from '../constants';
 import { LEAD_PRESETS } from '../presets';
 import { registerMixerCallback } from '../../shared/stores/mixer';
+import type { NoteSequencerStore } from '../../shared/stores/noteSequencer';
 import { bpm, isPlaying, registerEngine } from '../../shared/stores/transport';
 
 let engine: BraidsEngine | null = null;
@@ -43,6 +44,8 @@ export function setLeadEngine(e: BraidsEngine) {
             engine?.seqStop(); seqCurrentStep.set(0);
             engine?.setSeqExternal(false);
             stopArp();
+            // Belt-and-suspenders: release any note the engine might be holding
+            for (let n = 0; n < 128; n++) engine?.noteOff(n);
         },
     });
     bpm.subscribe((value) => { engine?.seqSetBpm(value); });
@@ -486,3 +489,21 @@ function arpTick() {
             break;
     }
 }
+
+// --- Adapter: bundle sequencer stores for shared NoteSequencer components ---
+export const leadSeq: NoteSequencerStore = {
+    seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
+    seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen,
+    connectEngine: () => {}, connectOnStep: () => {},
+    addSeqPage, setSeqPage, selectSeqStep,
+    setSeqStepFromNotes: (notes: number[], label: string) => {
+        const step = get(seqSelectedStep);
+        seqSteps.update(s => { s[step] = { ...s[step], notes, gate: true, label }; return [...s]; });
+        engine?.setStepNotes(step, notes);
+    },
+    toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
+    setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
+    setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
+    toggleSeqSettings, toggleStepSettings,
+    closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); arpSettingsOpen.set(false); },
+};

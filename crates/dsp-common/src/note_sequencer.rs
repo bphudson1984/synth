@@ -27,16 +27,17 @@ impl Default for Step {
 #[derive(Clone, Copy, PartialEq)]
 enum PlayState { Stopped, Playing }
 
-pub enum LeadSeqEvent {
+pub enum NoteSeqEvent {
     NoteOn { notes: [u8; MAX_NOTES_PER_STEP], num_notes: u8, velocity: u8 },
     NoteOff,
 }
 
-pub struct LeadSequencer {
+pub struct NoteSequencer {
     pub steps: [Step; MAX_STEPS],
     pub length: usize,
     state: PlayState,
     current_step: usize,
+    display_step: usize, // the step that was last triggered (for UI)
     sample_counter: f32,
     samples_per_step: f32,
     gate_active: bool,
@@ -60,12 +61,12 @@ pub struct LeadSequencer {
     step_is_even: bool,
 }
 
-impl LeadSequencer {
+impl NoteSequencer {
     pub fn new(sample_rate: f32) -> Self {
         let mut seq = Self {
             steps: [Step::default(); MAX_STEPS],
             length: PAGE_SIZE,
-            state: PlayState::Stopped, current_step: 0,
+            state: PlayState::Stopped, current_step: 0, display_step: 0,
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
             trigger_pending: false,
@@ -82,6 +83,7 @@ impl LeadSequencer {
     pub fn play(&mut self) {
         self.state = PlayState::Playing;
         self.current_step = if self.direction == 1 { self.length - 1 } else { 0 };
+        self.display_step = self.current_step;
         self.sample_counter = 0.0;
         self.gate_active = false;
         self.gate_counter = 0.0;
@@ -97,9 +99,17 @@ impl LeadSequencer {
         self.ratchet_count = 0;
     }
 
-    pub fn set_bpm(&mut self, bpm: f32) { self.bpm = bpm.clamp(30.0, 300.0); self.update_timing(); }
+    pub fn set_bpm(&mut self, bpm: f32) {
+        let old_sps = self.samples_per_step;
+        self.bpm = bpm.clamp(30.0, 300.0);
+        self.update_timing();
+        if old_sps > 0.0 {
+            let ratio = self.sample_counter / old_sps;
+            self.sample_counter = ratio * self.samples_per_step;
+        }
+    }
     pub fn set_length(&mut self, len: usize) { self.length = len.clamp(PAGE_SIZE, MAX_STEPS); }
-    pub fn current_step(&self) -> usize { self.current_step }
+    pub fn current_step(&self) -> usize { self.display_step }
     pub fn is_playing(&self) -> bool { self.state == PlayState::Playing }
 
     fn update_timing(&mut self) {
@@ -113,7 +123,16 @@ impl LeadSequencer {
         };
     }
 
-    pub fn set_time_div(&mut self, div: u8) { self.time_div = div; self.update_timing(); }
+    pub fn set_time_div(&mut self, div: u8) {
+        let old_sps = self.samples_per_step;
+        self.time_div = div;
+        self.update_timing();
+        // Scale counter proportionally to new rate so position within step is preserved
+        if old_sps > 0.0 {
+            let ratio = self.sample_counter / old_sps;
+            self.sample_counter = ratio * self.samples_per_step;
+        }
+    }
 
     pub fn rotate(&mut self, dir: i32) {
         let len = self.length;
@@ -165,7 +184,7 @@ impl LeadSequencer {
         self.step_is_even = !self.step_is_even;
     }
 
-    pub fn process(&mut self, events: &mut Vec<LeadSeqEvent>) {
+    pub fn process(&mut self, events: &mut Vec<NoteSeqEvent>) {
         if self.state != PlayState::Playing { return; }
 
         // Ratchet processing — subdivided retriggering within a step
@@ -176,7 +195,7 @@ impl LeadSequencer {
                 self.gate_counter += 1.0;
                 if self.gate_counter >= self.gate_samples {
                     self.gate_active = false;
-                    events.push(LeadSeqEvent::NoteOff);
+                    events.push(NoteSeqEvent::NoteOff);
                 }
             }
             if self.ratchet_counter >= self.ratchet_samples {
@@ -184,11 +203,11 @@ impl LeadSequencer {
                 self.ratchet_idx += 1;
                 if self.ratchet_idx < self.ratchet_count {
                     // Retrigger
-                    events.push(LeadSeqEvent::NoteOff);
+                    events.push(NoteSeqEvent::NoteOff);
                     self.gate_samples = self.ratchet_samples * (self.ratchet_step.gate_pct as f32 / 100.0);
                     self.gate_counter = 0.0;
                     self.gate_active = true;
-                    events.push(LeadSeqEvent::NoteOn {
+                    events.push(NoteSeqEvent::NoteOn {
                         notes: self.ratchet_step.notes,
                         num_notes: self.ratchet_step.num_notes,
                         velocity: self.ratchet_step.velocity,
@@ -203,6 +222,7 @@ impl LeadSequencer {
                 if self.sample_counter >= self.effective_step_samples() {
                     self.sample_counter -= self.effective_step_samples();
                     self.ratchet_count = 0; // force end ratchet on step boundary
+                    self.display_step = self.current_step;
                     self.trigger_current_step(events);
                     self.advance_step();
                 }
@@ -215,7 +235,7 @@ impl LeadSequencer {
             self.gate_counter += 1.0;
             if self.gate_counter >= self.gate_samples {
                 self.gate_active = false;
-                events.push(LeadSeqEvent::NoteOff);
+                events.push(NoteSeqEvent::NoteOff);
             }
         }
 
@@ -232,6 +252,7 @@ impl LeadSequencer {
         }
 
         if should_trigger {
+            self.display_step = self.current_step;
             self.trigger_current_step(events);
             self.advance_step();
         }
@@ -246,7 +267,13 @@ impl LeadSequencer {
         }
     }
 
-    fn trigger_current_step(&mut self, events: &mut Vec<LeadSeqEvent>) {
+    fn trigger_current_step(&mut self, events: &mut Vec<NoteSeqEvent>) {
+        // Release previous note if gate is still active
+        if self.gate_active {
+            self.gate_active = false;
+            events.push(NoteSeqEvent::NoteOff);
+        }
+
         let step = self.steps[self.current_step];
         if step.skip || !step.gate || step.num_notes == 0 { return; }
 
@@ -271,7 +298,7 @@ impl LeadSequencer {
         };
         self.gate_counter = 0.0;
         self.gate_active = true;
-        events.push(LeadSeqEvent::NoteOn {
+        events.push(NoteSeqEvent::NoteOn {
             notes: step.notes, num_notes: step.num_notes, velocity: step.velocity,
         });
     }

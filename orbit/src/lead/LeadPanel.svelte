@@ -2,10 +2,10 @@
     import { SCALE_NOTES, SCALE_CHORDS, LEAD_PARAMS, LEAD_COLOUR, MODELS } from './constants';
     import {
         selectedModel, selectedParam, sliderValue, triggeredNotes, padMode, latchEnabled,
-        seqNumPages, seqCurrentPage, seqSelectedStep, currentLeadPreset,
+        currentLeadPreset, leadSeq,
         arpSettingsOpen, seqSettingsOpen, stepSettingsOpen,
         selectModel, selectLeadParam, setSliderValue, triggerPad,
-        togglePadMode, toggleLatch, setSeqStepFromPad, selectSeqStep, setSeqPage,
+        togglePadMode, toggleLatch, setSeqStepFromPad,
         loadLeadPreset, toggleArpSettings, toggleSeqSettings, toggleStepSettings,
     } from './stores/state';
     import { LEAD_PRESETS } from './presets';
@@ -13,10 +13,10 @@
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
-    import LeadSequencer from './LeadSequencer.svelte';
+    import NoteSequencer from '../shared/components/NoteSequencer.svelte';
+    import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
+    import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
     import ArpSettings from './ArpSettings.svelte';
-    import SeqSettings from './SeqSettings.svelte';
-    import StepSettings from './StepSettings.svelte';
 
     $: model = $selectedModel;
     $: selParam = $selectedParam;
@@ -45,12 +45,12 @@
     function handlePadClick(i: number) {
         triggerPad(i);
         setSeqStepFromPad(i);
-        const cur = get(seqSelectedStep);
-        const page = get(seqCurrentPage);
+        const cur = get(leadSeq.seqSelectedStep);
+        const page = get(leadSeq.seqCurrentPage);
         const pageStart = page * 16;
         const pageEnd = pageStart + 15;
-        if (cur < pageEnd) { selectSeqStep(cur + 1); }
-        else { selectSeqStep(pageStart); }
+        if (cur < pageEnd) { leadSeq.selectSeqStep(cur + 1); }
+        else { leadSeq.selectSeqStep(pageStart); }
     }
 </script>
 
@@ -74,11 +74,11 @@
     {#if arpOpen}
         <div class="drawer-row"><ArpSettings /></div>
     {:else if seqOpen}
-        <div class="drawer-row"><SeqSettings /></div>
+        <div class="drawer-row"><SeqSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
     {:else if stepOpen}
-        <div class="drawer-row"><StepSettings /></div>
+        <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
     {/if}
-    <LeadSequencer />
+    <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
     <PadCircle
         voices={pads}
         params={[...LEAD_PARAMS]}

@@ -1,5 +1,5 @@
 use braids_dsp::engine::BraidsSynth;
-use braids_dsp::sequencer::MAX_STEPS;
+use dsp_common::note_sequencer::MAX_STEPS;
 
 static mut ENGINE: Option<BraidsSynth> = None;
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
@@ -67,7 +67,16 @@ pub extern "C" fn set_param(id: u8, value: f32) {
 
 // --- Sequencer ---
 #[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.play(); } } }
-#[no_mangle] pub extern "C" fn seq_stop() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.stop(); } } }
+#[no_mangle] pub extern "C" fn seq_stop() {
+    unsafe {
+        if let Some(e) = ENGINE.as_mut() {
+            e.sequencer.stop();
+            // Release any hanging note
+            let n = e.current_note;
+            if n > 0 { e.note_off(n); }
+        }
+    }
+}
 #[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_bpm(bpm); } } }
 #[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(e) = ENGINE.as_ref() { e.sequencer.current_step() as u8 } else { 0 } } }
 #[no_mangle] pub extern "C" fn seq_clear() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.clear(); } } }

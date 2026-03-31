@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 braids-dsp = { path = "../braids-dsp" }
+dsp-common = { path = "../dsp-common" }

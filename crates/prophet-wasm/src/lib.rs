@@ -6,14 +6,18 @@ use prophet_dsp::effects::chorus::StereoChorus;
 use prophet_dsp::effects::delay::TapeDelay;
 use prophet_dsp::effects::reverb::PlateReverb;
 use prophet_dsp::arpeggiator::{Arpeggiator, ArpMode, ArpDivision};
+use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent, MAX_STEPS};
 
-// Static mutable globals — safe in single-threaded WASM.
 static mut SYNTH: Option<ProphetSynth> = None;
 static mut CHORUS: Option<StereoChorus> = None;
 static mut DELAY: Option<TapeDelay> = None;
 static mut REVERB: Option<PlateReverb> = None;
 static mut ARP: Option<Arpeggiator> = None;
 static mut ARP_LAST_NOTE: u8 = 0;
+static mut SEQ: Option<NoteSequencer> = None;
+static mut SEQ_EVENTS: Option<Vec<NoteSeqEvent>> = None;
+static mut SEQ_EXTERNAL: bool = false;
+static mut SEQ_LAST_NOTE: u8 = 0;
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
 static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
@@ -42,6 +46,8 @@ pub extern "C" fn init(sample_rate: f32) {
         DELAY = Some(TapeDelay::new(sample_rate));
         REVERB = Some(PlateReverb::new(sample_rate));
         ARP = Some(Arpeggiator::new(sample_rate));
+        SEQ = Some(NoteSequencer::new(sample_rate));
+        SEQ_EVENTS = Some(Vec::with_capacity(4));
     }
 }
 
@@ -54,9 +60,35 @@ pub extern "C" fn process(num_samples: u32) {
         let reverb = REVERB.as_mut().unwrap();
 
         let arp = ARP.as_mut().unwrap();
+        let seq = SEQ.as_mut().unwrap();
 
         let n = (num_samples as usize).min(256);
         for i in 0..n {
+            // Sequencer generates note events
+            let events = SEQ_EVENTS.as_mut().unwrap();
+            events.clear();
+            seq.process(events);
+            if !SEQ_EXTERNAL {
+                for ev in events.iter() {
+                    match ev {
+                        NoteSeqEvent::NoteOn { notes, num_notes, velocity } => {
+                            if *num_notes > 0 {
+                                // Release previous sequencer note
+                                if SEQ_LAST_NOTE > 0 { synth.note_off(SEQ_LAST_NOTE); }
+                                synth.note_on(notes[0], *velocity);
+                                SEQ_LAST_NOTE = notes[0];
+                            }
+                        }
+                        NoteSeqEvent::NoteOff => {
+                            if SEQ_LAST_NOTE > 0 {
+                                synth.note_off(SEQ_LAST_NOTE);
+                                SEQ_LAST_NOTE = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
             // Arpeggiator generates note events
             if let Some((note, vel)) = arp.process() {
                 if vel > 0 {
@@ -231,3 +263,46 @@ pub extern "C" fn set_param(id: u32, value: f32) {
         }
     }
 }
+
+// --- Note Sequencer ---
+#[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(s) = SEQ.as_mut() { s.play(); } } }
+#[no_mangle] pub extern "C" fn seq_stop() {
+    unsafe {
+        if let Some(s) = SEQ.as_mut() { s.stop(); }
+        if let Some(synth) = SYNTH.as_mut() {
+            if SEQ_LAST_NOTE > 0 { synth.note_off(SEQ_LAST_NOTE); SEQ_LAST_NOTE = 0; }
+            // Belt-and-suspenders: release all voices
+            for n in 0..128u8 { synth.note_off(n); }
+        }
+    }
+}
+#[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_bpm(bpm); } } }
+#[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(s) = SEQ.as_ref() { s.current_step() as u8 } else { 0 } } }
+#[no_mangle] pub extern "C" fn seq_clear() { unsafe { if let Some(s) = SEQ.as_mut() { s.clear(); } } }
+#[no_mangle] pub extern "C" fn seq_set_external(ext: u8) { unsafe { SEQ_EXTERNAL = ext != 0; } }
+#[no_mangle] pub extern "C" fn seq_set_length(len: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_length(len as usize); } } }
+#[no_mangle] pub extern "C" fn seq_set_step_notes(step: u8, num: u8, n1: u8, n2: u8, n3: u8, n4: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].notes = [n1, n2, n3, n4]; s.steps[i].num_notes = num.min(4); s.steps[i].gate = true; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_gate(step: u8, gate: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].gate = gate != 0; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_velocity(step: u8, vel: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].velocity = vel; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_gate_pct(step: u8, pct: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].gate_pct = pct; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_probability(step: u8, prob: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].probability = prob; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_ratchet(step: u8, count: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].ratchet = count.clamp(1, 4); } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_step_skip(step: u8, skip: u8) {
+    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].skip = skip != 0; } } }
+}
+#[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.direction = dir; } } }
+#[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(s) = SEQ.as_mut() { s.swing = swing.clamp(0.0, 1.0); } } }
+#[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_time_div(div); } } }
+#[no_mangle] pub extern "C" fn seq_rotate(dir: i32) { unsafe { if let Some(s) = SEQ.as_mut() { s.rotate(dir); } } }
