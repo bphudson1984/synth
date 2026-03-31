@@ -7,6 +7,9 @@ export class AudioEngine {
 
     async init(): Promise<void> {
         this.ctx = new AudioContext({ sampleRate: 48000 });
+        // iOS Safari requires an explicit resume() during a user gesture —
+        // without it the context stays "suspended" and produces no audio.
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
 
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)

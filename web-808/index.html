@@ -280,6 +280,9 @@
 
             try {
                 const ctx = new AudioContext({ sampleRate: 48000 });
+                // iOS Safari requires an explicit resume() during a user gesture —
+                // without it the context stays "suspended" and produces no audio.
+                if (ctx.state === 'suspended') await ctx.resume();
                 // Fetch raw WASM bytes — Chrome silently drops WebAssembly.Module
                 // objects posted to AudioWorklet threads, causing init to hang.
                 const wasmBytes = await (await fetch('/public/tr808.wasm')).arrayBuffer();
