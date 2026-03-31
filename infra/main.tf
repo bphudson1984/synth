@@ -64,3 +64,27 @@ output "static_web_app_api_key" {
 output "resource_group_name" {
   value = azurerm_resource_group.prophet5.name
 }
+
+# ============================================================
+# QA Environment (opt-in via enable_qa = true)
+# ============================================================
+resource "azurerm_static_web_app" "qa" {
+  count               = var.enable_qa ? 1 : 0
+  name                = "${var.project_name}-qa"
+  resource_group_name = azurerm_resource_group.prophet5.name
+  location            = var.location
+  sku_tier            = "Free"
+  sku_size            = "Free"
+  tags = merge(var.tags, {
+    environment = "qa"
+  })
+}
+
+output "qa_static_web_app_url" {
+  value = var.enable_qa ? "https://${azurerm_static_web_app.qa[0].default_host_name}" : ""
+}
+
+output "qa_static_web_app_api_key" {
+  value     = var.enable_qa ? azurerm_static_web_app.qa[0].api_key : ""
+  sensitive = true
+}

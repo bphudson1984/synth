@@ -21,6 +21,12 @@ variable "sku_tier" {
   default     = "Free"
 }
 
+variable "enable_qa" {
+  description = "Whether to create a QA Static Web App environment"
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Resource tags"
   type        = map(string)

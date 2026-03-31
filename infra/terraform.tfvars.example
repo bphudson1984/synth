@@ -3,3 +3,9 @@ subscription_id = "your-azure-subscription-id-here"
 project_name    = "prophet5-synth"
 location        = "uksouth"
 sku_tier        = "Free"
+
+# Set to true to create a QA Static Web App for branch testing.
+# After applying, copy the QA API key into the GitHub Actions secret
+# AZURE_STATIC_WEB_APPS_QA_API_TOKEN:
+#   terraform output -raw qa_static_web_app_api_key
+enable_qa = false
