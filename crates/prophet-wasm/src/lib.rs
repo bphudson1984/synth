@@ -6,7 +6,7 @@ use prophet_dsp::effects::chorus::StereoChorus;
 use prophet_dsp::effects::delay::TapeDelay;
 use prophet_dsp::effects::reverb::PlateReverb;
 use prophet_dsp::arpeggiator::{Arpeggiator, ArpMode, ArpDivision};
-use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent, MAX_STEPS};
+use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent, MAX_STEPS, MAX_NOTES_PER_STEP};
 
 static mut SYNTH: Option<ProphetSynth> = None;
 static mut CHORUS: Option<StereoChorus> = None;
@@ -17,7 +17,8 @@ static mut ARP_LAST_NOTE: u8 = 0;
 static mut SEQ: Option<NoteSequencer> = None;
 static mut SEQ_EVENTS: Option<Vec<NoteSeqEvent>> = None;
 static mut SEQ_EXTERNAL: bool = false;
-static mut SEQ_LAST_NOTE: u8 = 0;
+static mut SEQ_LAST_NOTES: [u8; MAX_NOTES_PER_STEP] = [0; MAX_NOTES_PER_STEP];
+static mut SEQ_LAST_NUM_NOTES: u8 = 0;
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
 static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
@@ -73,17 +74,23 @@ pub extern "C" fn process(num_samples: u32) {
                     match ev {
                         NoteSeqEvent::NoteOn { notes, num_notes, velocity } => {
                             if *num_notes > 0 {
-                                // Release previous sequencer note
-                                if SEQ_LAST_NOTE > 0 { synth.note_off(SEQ_LAST_NOTE); }
-                                synth.note_on(notes[0], *velocity);
-                                SEQ_LAST_NOTE = notes[0];
+                                // Release previous sequencer notes
+                                for j in 0..SEQ_LAST_NUM_NOTES as usize {
+                                    synth.note_off(SEQ_LAST_NOTES[j]);
+                                }
+                                // Play all notes in the step (chords)
+                                for j in 0..*num_notes as usize {
+                                    synth.note_on(notes[j], *velocity);
+                                }
+                                SEQ_LAST_NOTES = *notes;
+                                SEQ_LAST_NUM_NOTES = *num_notes;
                             }
                         }
                         NoteSeqEvent::NoteOff => {
-                            if SEQ_LAST_NOTE > 0 {
-                                synth.note_off(SEQ_LAST_NOTE);
-                                SEQ_LAST_NOTE = 0;
+                            for j in 0..SEQ_LAST_NUM_NOTES as usize {
+                                synth.note_off(SEQ_LAST_NOTES[j]);
                             }
+                            SEQ_LAST_NUM_NOTES = 0;
                         }
                     }
                 }
@@ -270,7 +277,10 @@ pub extern "C" fn set_param(id: u32, value: f32) {
     unsafe {
         if let Some(s) = SEQ.as_mut() { s.stop(); }
         if let Some(synth) = SYNTH.as_mut() {
-            if SEQ_LAST_NOTE > 0 { synth.note_off(SEQ_LAST_NOTE); SEQ_LAST_NOTE = 0; }
+            for j in 0..SEQ_LAST_NUM_NOTES as usize {
+                synth.note_off(SEQ_LAST_NOTES[j]);
+            }
+            SEQ_LAST_NUM_NOTES = 0;
             // Belt-and-suspenders: release all voices
             for n in 0..128u8 { synth.note_off(n); }
         }
