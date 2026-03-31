@@ -1,0 +1,7 @@
+[package]
+name = "braids-dsp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dsp-common = { path = "../dsp-common" }

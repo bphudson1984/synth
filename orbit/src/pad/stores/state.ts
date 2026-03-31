@@ -5,10 +5,16 @@ import { PARAM } from '../audio/engine';
 import { PRESETS, type Preset } from '../presets';
 import { bpm } from '../../shared/stores/transport';
 import { registerMixerCallback } from '../../shared/stores/mixer';
+import { createNoteSequencerStore } from '../../shared/stores/noteSequencer';
+
+// Shared note sequencer for the PAD panel
+export const padSeq = createNoteSequencerStore();
 
 let engine: ProphetEngine | null = null;
 export function setPadEngine(e: ProphetEngine) {
     engine = e;
+    e.onStep = (step) => padSeq.connectOnStep(step);
+    padSeq.connectEngine(e);
     bpm.subscribe((value) => {
         if (engine && get(arpEnabled)) {
             engine.setParam(PARAM.ARP_BPM, value);

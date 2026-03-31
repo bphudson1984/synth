@@ -10,6 +10,7 @@ export function getAudioContext(): Promise<AudioContext> {
             await ctx.audioWorklet.addModule(base + 'worklet-processor.js');
             await ctx.audioWorklet.addModule(base + 'prophet-worklet.js');
             await ctx.audioWorklet.addModule(base + 'tb303-worklet.js');
+            await ctx.audioWorklet.addModule(base + 'braids-worklet.js');
             return ctx;
         })();
     }

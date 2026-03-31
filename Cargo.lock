@@ -191,6 +191,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "braids-dsp"
+version = "0.1.0"
+dependencies = [
+ "dsp-common",
+]
+
+[[package]]
+name = "braids-wasm"
+version = "0.1.0"
+dependencies = [
+ "braids-dsp",
+ "dsp-common",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1615,6 +1630,7 @@ dependencies = [
 name = "prophet-wasm"
 version = "0.1.0"
 dependencies = [
+ "dsp-common",
  "prophet-dsp",
 ]
 

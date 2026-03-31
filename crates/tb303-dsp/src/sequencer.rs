@@ -30,6 +30,7 @@ pub struct AcidSequencer {
     gate_active: bool,
     gate_samples: f32,
     gate_counter: f32,
+    trigger_pending: bool,
     bpm: f32,
     sample_rate: f32,
 }
@@ -41,7 +42,7 @@ impl AcidSequencer {
             state: PlayState::Stopped, current_step: 0,
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
-            bpm: 120.0, sample_rate,
+            trigger_pending: false, bpm: 120.0, sample_rate,
         };
         seq.update_timing();
         seq
@@ -53,6 +54,7 @@ impl AcidSequencer {
         self.sample_counter = 0.0;
         self.gate_active = false;
         self.gate_counter = 0.0;
+        self.trigger_pending = true;
     }
 
     pub fn stop(&mut self) {
@@ -84,9 +86,18 @@ impl AcidSequencer {
             }
         }
 
-        self.sample_counter += 1.0;
-        if self.sample_counter >= self.samples_per_step {
-            self.sample_counter -= self.samples_per_step;
+        let mut should_trigger = self.trigger_pending;
+        self.trigger_pending = false;
+
+        if !should_trigger {
+            self.sample_counter += 1.0;
+            if self.sample_counter >= self.samples_per_step {
+                self.sample_counter -= self.samples_per_step;
+                should_trigger = true;
+            }
+        }
+
+        if should_trigger {
             let step = &self.steps[self.current_step];
 
             if step.gate {

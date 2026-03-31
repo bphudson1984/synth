@@ -1,5 +1,5 @@
 [package]
-name = "prophet-wasm"
+name = "braids-wasm"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,9 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-prophet-dsp = { path = "../prophet-dsp" }
+braids-dsp = { path = "../braids-dsp" }
 dsp-common = { path = "../dsp-common" }
-
-[profile.release]
-opt-level = 3
-lto = true

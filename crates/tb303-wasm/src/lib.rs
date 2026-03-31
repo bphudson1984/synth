@@ -47,7 +47,14 @@ pub extern "C" fn set_param(id: u8, value: f32) {
 }
 
 #[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.play(); } } }
-#[no_mangle] pub extern "C" fn seq_stop() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.stop(); } } }
+#[no_mangle] pub extern "C" fn seq_stop() {
+    unsafe {
+        if let Some(e) = ENGINE.as_mut() {
+            e.sequencer.stop();
+            e.voice.note_off();
+        }
+    }
+}
 #[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_bpm(bpm); } } }
 #[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(e) = ENGINE.as_ref() { e.sequencer.current_step() as u8 } else { 0 } } }
 #[no_mangle] pub extern "C" fn seq_is_playing() -> u8 { unsafe { if let Some(e) = ENGINE.as_ref() { if e.sequencer.is_playing() { 1 } else { 0 } } else { 0 } } }

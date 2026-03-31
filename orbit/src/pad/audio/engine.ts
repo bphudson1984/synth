@@ -5,6 +5,7 @@ export class ProphetEngine {
     private panner: StereoPannerNode | null = null;
     private _ready = false;
     get ready() { return this._ready; }
+    onStep: ((step: number) => void) | null = null;
 
     async init(): Promise<void> {
         const ctx = await getAudioContext();
@@ -34,6 +35,7 @@ export class ProphetEngine {
                     clearTimeout(timeout);
                     reject(new Error(e.data.message ?? 'Prophet worklet failed'));
                 }
+                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
 
             this.node!.port.postMessage(
@@ -95,6 +97,30 @@ export class ProphetEngine {
         // Master
         this.setParam(PARAM.MASTER_VOL, 0.5);
     }
+
+    // --- Sequencer ---
+    seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
+    seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
+    seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
+    seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
+    setStepNotes(step: number, notes: number[]) {
+        this.node?.port.postMessage({
+            type: 'seq-set-step-notes', step,
+            num: notes.length, n1: notes[0] ?? 0, n2: notes[1] ?? 0, n3: notes[2] ?? 0, n4: notes[3] ?? 0,
+        });
+    }
+    setStepGate(step: number, gate: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-gate', step, gate }); }
+    setStepVelocity(step: number, vel: number) { this.node?.port.postMessage({ type: 'seq-set-step-velocity', step, value: vel }); }
+    setStepGatePct(step: number, pct: number) { this.node?.port.postMessage({ type: 'seq-set-step-gate-pct', step, value: pct }); }
+    setStepProbability(step: number, prob: number) { this.node?.port.postMessage({ type: 'seq-set-step-probability', step, value: prob }); }
+    setStepRatchet(step: number, count: number) { this.node?.port.postMessage({ type: 'seq-set-step-ratchet', step, value: count }); }
+    setStepSkip(step: number, skip: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-skip', step, value: skip }); }
+    setDirection(dir: number) { this.node?.port.postMessage({ type: 'seq-set-direction', value: dir }); }
+    setSwing(swing: number) { this.node?.port.postMessage({ type: 'seq-set-swing', value: swing }); }
+    setTimeDivision(div: number) { this.node?.port.postMessage({ type: 'seq-set-time-div', value: div }); }
+    seqRotate(dir: number) { this.node?.port.postMessage({ type: 'seq-rotate', value: dir }); }
+    setSeqExternal(ext: boolean) { this.node?.port.postMessage({ type: 'seq-set-external', value: ext }); }
+    setSeqLength(len: number) { this.node?.port.postMessage({ type: 'seq-set-length', value: len }); }
 }
 
 export const PARAM = {
