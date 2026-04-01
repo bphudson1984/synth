@@ -8,6 +8,21 @@ export class AudioEngine {
     async init(): Promise<void> {
         this.ctx = new AudioContext({ sampleRate: 48000 });
 
+        // iOS Safari (and Chrome on iOS, which uses WebKit) may create
+        // the AudioContext in a "suspended" state even inside a user-gesture
+        // handler.  Explicitly resuming guarantees audio output.
+        if (this.ctx.state === 'suspended') {
+            await this.ctx.resume();
+        }
+
+        // Re-resume the context when the page becomes visible again.
+        // iOS suspends the AudioContext when the browser tab is backgrounded.
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && this.ctx?.state === 'suspended') {
+                this.ctx.resume();
+            }
+        });
+
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)
         const wasmResponse = await fetch(import.meta.env.BASE_URL + 'prophet-dsp.wasm');
