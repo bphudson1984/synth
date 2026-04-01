@@ -33,6 +33,12 @@ pub struct AcidSequencer {
     trigger_pending: bool,
     bpm: f32,
     sample_rate: f32,
+    pub direction: u8,   // 0=forward, 1=reverse, 2=pingpong, 3=random
+    pub swing: f32,      // 0-1
+    time_div: u8,        // 0=1/4, 1=1/8, 2=1/16, 3=1/32
+    step_is_even: bool,
+    pingpong_forward: bool,
+    rng_state: u32,
 }
 
 impl AcidSequencer {
@@ -43,18 +49,27 @@ impl AcidSequencer {
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
             trigger_pending: false, bpm: 120.0, sample_rate,
+            direction: 0, swing: 0.0, time_div: 2,
+            step_is_even: true, pingpong_forward: true, rng_state: 12345,
         };
         seq.update_timing();
         seq
     }
 
+    pub fn set_time_div(&mut self, div: u8) {
+        self.time_div = div.min(3);
+        self.update_timing();
+    }
+
     pub fn play(&mut self) {
         self.state = PlayState::Playing;
-        self.current_step = 0;
+        self.current_step = if self.direction == 1 { self.length.saturating_sub(1) } else { 0 };
         self.sample_counter = 0.0;
         self.gate_active = false;
         self.gate_counter = 0.0;
         self.trigger_pending = true;
+        self.step_is_even = true;
+        self.pingpong_forward = true;
     }
 
     pub fn stop(&mut self) {
@@ -72,7 +87,15 @@ impl AcidSequencer {
 
     fn update_timing(&mut self) {
         let beats_per_sec = self.bpm / 60.0;
-        self.samples_per_step = self.sample_rate / beats_per_sec / 4.0;
+        let div = match self.time_div { 0 => 1.0, 1 => 2.0, 2 => 4.0, _ => 8.0 };
+        self.samples_per_step = self.sample_rate / beats_per_sec / div;
+    }
+
+    fn rand(&mut self) -> u32 {
+        self.rng_state ^= self.rng_state << 13;
+        self.rng_state ^= self.rng_state >> 17;
+        self.rng_state ^= self.rng_state << 5;
+        self.rng_state
     }
 
     pub fn process(&mut self, events: &mut Vec<AcidSeqEvent>) {
@@ -91,8 +114,13 @@ impl AcidSequencer {
 
         if !should_trigger {
             self.sample_counter += 1.0;
-            if self.sample_counter >= self.samples_per_step {
-                self.sample_counter -= self.samples_per_step;
+            let effective_step = if self.step_is_even && self.swing > 0.0 {
+                self.samples_per_step + self.swing * self.samples_per_step * 0.5
+            } else {
+                self.samples_per_step
+            };
+            if self.sample_counter >= effective_step {
+                self.sample_counter -= effective_step;
                 should_trigger = true;
             }
         }
@@ -118,7 +146,39 @@ impl AcidSequencer {
                 events.push(AcidSeqEvent::NoteOff);
             }
 
-            self.current_step = (self.current_step + 1) % self.length;
+            self.advance_step();
+        }
+    }
+
+    fn advance_step(&mut self) {
+        self.step_is_even = !self.step_is_even;
+        match self.direction {
+            1 => { // reverse
+                if self.current_step == 0 { self.current_step = self.length - 1; }
+                else { self.current_step -= 1; }
+            }
+            2 => { // pingpong
+                if self.pingpong_forward {
+                    self.current_step += 1;
+                    if self.current_step >= self.length {
+                        self.current_step = self.length.saturating_sub(2).max(0);
+                        self.pingpong_forward = false;
+                    }
+                } else {
+                    if self.current_step == 0 {
+                        self.current_step = 1.min(self.length - 1);
+                        self.pingpong_forward = true;
+                    } else {
+                        self.current_step -= 1;
+                    }
+                }
+            }
+            3 => { // random
+                self.current_step = (self.rand() as usize) % self.length;
+            }
+            _ => { // forward
+                self.current_step = (self.current_step + 1) % self.length;
+            }
         }
     }
 

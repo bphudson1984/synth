@@ -29,7 +29,7 @@ jobs:
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test -p tr808-dsp -p audio-test-harness
+        run: cargo test -p dsp-common -p prophet-dsp -p braids-dsp -p tb303-dsp -p tr808-dsp -p tr909-dsp -p audio-test-harness
 
   build-and-deploy:
     name: Build WASM & Deploy

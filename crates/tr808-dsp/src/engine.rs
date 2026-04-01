@@ -1,3 +1,4 @@
+use dsp_common::engine::{SynthEngine, TriggerEngine};
 use crate::{
     bass_drum::BassDrum, snare::SnareDrum, hihat::{ClosedHiHat, OpenHiHat, Cymbal},
     clap::HandClap, cowbell::Cowbell, tom::Tom, rimshot::RimShot,
@@ -99,6 +100,61 @@ impl TR808 {
             + self.cl.process();
         (out * self.master_volume).clamp(-1.0, 1.0)
     }
+
+    /// Set a per-voice parameter using (voice_id, param_id) addressing.
+    /// param_id: 0=level, 1=tone/tuning/snappy, 2=decay
+    pub fn set_voice_param(&mut self, voice_id: u8, param_id: u8, value: f32) {
+        match (voice_id, param_id) {
+            (0, 0) => self.bd.level = value,
+            (0, 1) => self.bd.tone = value,
+            (0, 2) => self.bd.decay = value,
+            (1, 0) => self.sd.level = value,
+            (1, 1) => self.sd.tone = value,
+            (1, 2) => self.sd.snappy = value,
+            (2, 0) => self.lt.level = value,
+            (2, 1) => self.lt.tuning = value,
+            (3, 0) => self.mt.level = value,
+            (3, 1) => self.mt.tuning = value,
+            (4, 0) => self.ht.level = value,
+            (4, 1) => self.ht.tuning = value,
+            (5, 0) => self.rs.level = value,
+            (6, 0) => self.cp.level = value,
+            (7, 0) => self.ch.level = value,
+            (8, 0) => self.oh.level = value,
+            (8, 1) => self.oh.decay = value,
+            (9, 0) => self.cy.level = value,
+            (9, 1) => self.cy.decay = value,
+            (10, 0) => self.cb.level = value,
+            (11, 0) => self.ma.level = value,
+            (12, 0) => self.cl.level = value,
+            _ => {}
+        }
+    }
+}
+
+impl SynthEngine for TR808 {
+    fn process(&mut self) -> f32 { self.process() }
+
+    /// Compound param ID: voice_id * 16 + param_id.
+    /// Special: 255 = master volume.
+    fn set_param(&mut self, id: u32, value: f32) {
+        if id == 255 {
+            self.master_volume = value;
+        } else {
+            let voice_id = (id / 16) as u8;
+            let param_id = (id % 16) as u8;
+            self.set_voice_param(voice_id, param_id, value);
+        }
+    }
+
+    fn set_master_volume(&mut self, vol: f32) { self.master_volume = vol; }
+    fn master_volume(&self) -> f32 { self.master_volume }
+}
+
+impl TriggerEngine for TR808 {
+    fn trigger(&mut self, voice: u8) {
+        if let Some(v) = Voice::from_u8(voice) { self.trigger(v); }
+    }
 }
 
 #[cfg(test)]
@@ -134,5 +190,81 @@ mod tests {
         for _ in 0..4410 { tr.process(); }
         // The OH's envelope should be near zero
         // (can't easily isolate OH output, but the choke mechanism is tested)
+    }
+
+    #[test]
+    fn test_individual_voices_produce_sound() {
+        let voices = [
+            Voice::BD, Voice::SD, Voice::LT, Voice::MT, Voice::HT,
+            Voice::RS, Voice::CP, Voice::CH, Voice::OH, Voice::CY,
+            Voice::CB, Voice::MA, Voice::CL,
+        ];
+        for voice in voices {
+            let mut tr = TR808::new(44100.0);
+            tr.trigger(voice);
+            let buf: Vec<f32> = (0..4410).map(|_| tr.process()).collect();
+            audio_test_harness::level::assert_not_silent(
+                &buf,
+                0.001,
+            );
+        }
+    }
+
+    #[test]
+    fn test_silence_without_trigger() {
+        let mut tr = TR808::new(44100.0);
+        let buf: Vec<f32> = (0..4410).map(|_| tr.process()).collect();
+        audio_test_harness::level::assert_silent(&buf, 0.0001);
+    }
+
+    #[test]
+    fn test_master_volume() {
+        let mut tr1 = TR808::new(44100.0);
+        tr1.master_volume = 1.0;
+        tr1.trigger(Voice::BD);
+        let buf1: Vec<f32> = (0..4410).map(|_| tr1.process()).collect();
+        let rms1 = audio_test_harness::level::rms(&buf1);
+
+        let mut tr2 = TR808::new(44100.0);
+        tr2.master_volume = 0.25;
+        tr2.trigger(Voice::BD);
+        let buf2: Vec<f32> = (0..4410).map(|_| tr2.process()).collect();
+        let rms2 = audio_test_harness::level::rms(&buf2);
+
+        assert!(
+            rms1 > rms2 * 2.0,
+            "vol=1.0 ({rms1:.4}) should be >2x louder than vol=0.25 ({rms2:.4})"
+        );
+    }
+
+    #[test]
+    fn test_voices_decay_to_silence() {
+        let mut tr = TR808::new(44100.0);
+        tr.trigger(Voice::BD);
+        // Render 2 seconds — all drums should have decayed
+        let buf: Vec<f32> = (0..88200).map(|_| tr.process()).collect();
+        audio_test_harness::level::assert_silent(&buf[44100..], 0.001);
+    }
+
+    #[test]
+    fn test_sequencer_triggers_voices() {
+        use crate::sequencer::Sequencer;
+        let mut tr = TR808::new(44100.0);
+        let mut seq = Sequencer::new(44100.0);
+        seq.set_step(0, 0, true); // BD on step 0
+        seq.bpm = 240.0;
+        seq.play();
+
+        // Run sequencer manually and trigger voices
+        let mut events = Vec::new();
+        let mut buf = Vec::new();
+        for _ in 0..44100 {
+            seq.process(&mut events);
+            for event in &events {
+                if let Some(v) = Voice::from_u8(event.voice) { tr.trigger(v); }
+            }
+            buf.push(tr.process());
+        }
+        audio_test_harness::level::assert_not_silent(&buf, 0.01);
     }
 }

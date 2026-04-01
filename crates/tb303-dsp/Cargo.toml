@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 dsp-common = { path = "../dsp-common" }
+
+[dev-dependencies]
+audio-test-harness = { path = "../audio-test-harness" }

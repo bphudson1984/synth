@@ -1,52 +1,10 @@
 import { VOICES, getEngineVoiceId, getEngineTrackId, type EngineType } from '../constants';
-import { getAudioContext } from '../../shared/audio/context';
+import { BaseEngine } from '../../shared/audio/BaseEngine';
 
-export class OrbitEngine {
-    private node: AudioWorkletNode | null = null;
-    private panner: StereoPannerNode | null = null;
-    private _ready = false;
-    get ready() { return this._ready; }
-    onStep: ((step: number) => void) | null = null;
-
+export class OrbitEngine extends BaseEngine {
     async init(): Promise<void> {
-        const ctx = await getAudioContext();
-        const wasmResponse = await fetch(import.meta.env.BASE_URL + 'tr808.wasm');
-        if (!wasmResponse.ok) {
-            throw new Error(`Failed to fetch tr808.wasm: ${wasmResponse.status} ${wasmResponse.statusText}`);
-        }
-        // Send raw bytes instead of compiled WebAssembly.Module — Chrome silently
-        // drops Module objects posted to AudioWorklet threads, causing init to hang.
-        const wasmBytes = await wasmResponse.arrayBuffer();
-        this.node = new AudioWorkletNode(ctx, 'tr808-processor', {
-            outputChannelCount: [2], numberOfOutputs: 1,
-        });
-        await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => {
-                reject(new Error('TR808 worklet initialization timed out'));
-            }, 10000);
-
-            this.node!.port.onmessage = (e) => {
-                if (e.data.type === 'ready') {
-                    clearTimeout(timeout);
-                    this._ready = true;
-                    resolve();
-                } else if (e.data.type === 'error') {
-                    clearTimeout(timeout);
-                    reject(new Error(e.data.message ?? 'TR808 worklet failed'));
-                }
-                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
-            };
-            this.node!.port.postMessage(
-                { type: 'wasm-bytes', bytes: wasmBytes },
-                [wasmBytes]
-            );
-        });
-        this.panner = ctx.createStereoPanner();
-        this.node.connect(this.panner);
-        this.panner.connect(ctx.destination);
+        await this.initWorklet('tr808-processor', 'tr808.wasm');
     }
-
-    setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
 
     triggerVoice(orbitIndex: number, engine: EngineType = '808') {
         const voiceId = getEngineVoiceId(orbitIndex, engine);
@@ -67,14 +25,10 @@ export class OrbitEngine {
         this.node?.port.postMessage({ type: 'set-param', voice: voiceId, param: paramId, value: norm });
     }
 
-    seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
-    seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
-    seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
     seqToggleStep(orbitVoice: number, step: number) {
         const trackId = getEngineTrackId(orbitVoice);
         this.node?.port.postMessage({ type: 'seq-toggle', track: trackId, step });
     }
-    seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
 
     setTrackEngine(orbitIndex: number, engine: EngineType) {
         const trackId = getEngineTrackId(orbitIndex);
@@ -88,4 +42,6 @@ export class OrbitEngine {
     setMasterVolume(value: number) {
         this.node?.port.postMessage({ type: 'set-param', voice: 255, param: 0, value });
     }
+
+    setTimeDivision(div: number) { this.node?.port.postMessage({ type: 'seq-set-time-div', value: div }); }
 }

@@ -8,3 +8,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 tb303-dsp = { path = "../tb303-dsp" }
+dsp-common = { path = "../dsp-common" }

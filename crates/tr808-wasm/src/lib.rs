@@ -75,63 +75,16 @@ pub extern "C" fn trigger(voice_id: u8) {
 #[no_mangle]
 pub extern "C" fn set_param(voice_id: u8, param_id: u8, value: f32) {
     unsafe {
-        if voice_id >= 100 && voice_id < 200 {
-            // 909 params
-            let e = match ENGINE_909.as_mut() { Some(e) => e, None => return };
-            let v = voice_id - 100;
-            match (v, param_id) {
-                (0, 0) => e.bd.level = value,
-                (0, 1) => e.bd.tone = value,
-                (0, 2) => e.bd.decay = value,
-                (1, 0) => e.sd.level = value,
-                (1, 1) => e.sd.tone = value,
-                (1, 2) => e.sd.snappy = value,
-                (2, 0) => e.lt.level = value,
-                (2, 1) => e.lt.tuning = value,
-                (3, 0) => e.mt.level = value,
-                (3, 1) => e.mt.tuning = value,
-                (4, 0) => e.ht.level = value,
-                (4, 1) => e.ht.tuning = value,
-                (5, 0) => e.rs.level = value,
-                (6, 0) => e.cp.level = value,
-                (7, 0) => e.ch.level = value,
-                (8, 0) => e.oh.level = value,
-                (8, 1) => e.oh.decay = value,
-                (9, 0) => e.cc.level = value,
-                (9, 1) => e.cc.decay = value,
-                (10, 0) => e.rc.level = value,
-                (10, 1) => e.rc.decay = value,
-                _ => {}
-            }
+        if voice_id == 255 {
+            // Master volume — set on both engines
+            if let Some(e) = ENGINE_808.as_mut() { e.master_volume = value; }
+            if let Some(e) = ENGINE_909.as_mut() { e.master_volume = value; }
+        } else if voice_id >= 100 {
+            // 909 params — delegate to DSP set_voice_param
+            if let Some(e) = ENGINE_909.as_mut() { e.set_voice_param(voice_id - 100, param_id, value); }
         } else {
-            // 808 params
-            let e = match ENGINE_808.as_mut() { Some(e) => e, None => return };
-            match (voice_id, param_id) {
-                (0, 0) => e.bd.level = value,
-                (0, 1) => e.bd.tone = value,
-                (0, 2) => e.bd.decay = value,
-                (1, 0) => e.sd.level = value,
-                (1, 1) => e.sd.tone = value,
-                (1, 2) => e.sd.snappy = value,
-                (2, 0) => e.lt.level = value,
-                (2, 1) => e.lt.tuning = value,
-                (3, 0) => e.mt.level = value,
-                (3, 1) => e.mt.tuning = value,
-                (4, 0) => e.ht.level = value,
-                (4, 1) => e.ht.tuning = value,
-                (5, 0) => e.rs.level = value,
-                (6, 0) => e.cp.level = value,
-                (7, 0) => e.ch.level = value,
-                (8, 0) => e.oh.level = value,
-                (8, 1) => e.oh.decay = value,
-                (9, 0) => e.cy.level = value,
-                (9, 1) => e.cy.decay = value,
-                (10, 0) => e.cb.level = value,
-                (11, 0) => e.ma.level = value,
-                (12, 0) => e.cl.level = value,
-                (255, 0) => { e.master_volume = value; ENGINE_909.as_mut().unwrap().master_volume = value; },
-                _ => {}
-            }
+            // 808 params — delegate to DSP set_voice_param
+            if let Some(e) = ENGINE_808.as_mut() { e.set_voice_param(voice_id, param_id, value); }
         }
     }
 }
@@ -206,6 +159,11 @@ pub extern "C" fn seq_clear() {
 #[no_mangle]
 pub extern "C" fn seq_set_length(length: u8) {
     unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_length(length as usize); } }
+}
+
+#[no_mangle]
+pub extern "C" fn seq_set_time_div(div: u8) {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_time_div(div); } }
 }
 
 /// Set which engine a track uses: 0=808, 1=909

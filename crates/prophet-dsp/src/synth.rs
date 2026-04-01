@@ -1,3 +1,5 @@
+use dsp_common::engine::{SynthEngine, MelodicEngine};
+use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent, MAX_NOTES_PER_STEP};
 use crate::voice::Voice;
 use crate::lfo::Lfo;
 use crate::noise::NoiseGenerator;
@@ -30,6 +32,13 @@ pub struct ProphetSynth {
 
     // LFO initial amount — base modulation level even when mod wheel is at 0
     pub lfo_initial_amount: f32, // 0.0-1.0
+
+    // Embedded sequencer (matches Braids pattern)
+    pub sequencer: NoteSequencer,
+    seq_events: Vec<NoteSeqEvent>,
+    pub seq_external: bool,
+    seq_last_notes: [u8; MAX_NOTES_PER_STEP],
+    seq_last_num_notes: u8,
 }
 
 impl ProphetSynth {
@@ -54,6 +63,11 @@ impl ProphetSynth {
             pitch_bend: 0.0,
             pitch_bend_range: 2.0,
             lfo_initial_amount: 0.0,
+            sequencer: NoteSequencer::new(sample_rate),
+            seq_events: Vec::with_capacity(4),
+            seq_external: false,
+            seq_last_notes: [0; MAX_NOTES_PER_STEP],
+            seq_last_num_notes: 0,
         }
     }
 
@@ -99,6 +113,42 @@ impl ProphetSynth {
     }
 
     pub fn process(&mut self) -> f32 {
+        // Process sequencer events
+        self.seq_events.clear();
+        self.sequencer.process(&mut self.seq_events);
+        if !self.seq_external {
+            let mut seq_note_on: Option<([u8; MAX_NOTES_PER_STEP], u8, u8)> = None;
+            let mut seq_note_off = false;
+            for i in 0..self.seq_events.len() {
+                match &self.seq_events[i] {
+                    NoteSeqEvent::NoteOn { notes, num_notes, velocity } => {
+                        if *num_notes > 0 {
+                            seq_note_on = Some((*notes, *num_notes, *velocity));
+                        }
+                    }
+                    NoteSeqEvent::NoteOff => seq_note_off = true,
+                }
+            }
+            if seq_note_off {
+                for j in 0..self.seq_last_num_notes as usize {
+                    self.note_off(self.seq_last_notes[j]);
+                }
+                self.seq_last_num_notes = 0;
+            }
+            if let Some((notes, num_notes, vel)) = seq_note_on {
+                // Release previous sequencer notes
+                for j in 0..self.seq_last_num_notes as usize {
+                    self.note_off(self.seq_last_notes[j]);
+                }
+                // Play all notes in the step (chords)
+                for j in 0..num_notes as usize {
+                    self.note_on(notes[j], vel);
+                }
+                self.seq_last_notes = notes;
+                self.seq_last_num_notes = num_notes;
+            }
+        }
+
         // Global LFO (computed once, shared by all voices)
         let lfo_val = self.lfo.process();
 
@@ -164,6 +214,86 @@ impl ProphetSynth {
     fn find_voice_playing(&self, note: u8) -> Option<usize> {
         self.voices.iter().position(|v| v.active && v.note == note)
     }
+}
+
+impl SynthEngine for ProphetSynth {
+    fn process(&mut self) -> f32 { self.process() }
+
+    /// Set synth parameters (IDs 0-47). Effects (50-59) and arp (60-67)
+    /// are handled separately in the WASM wrapper.
+    fn set_param(&mut self, id: u32, value: f32) {
+        match id {
+            // Oscillator A
+            0 => self.for_each_voice(|v| v.osc_a.set_saw(value > 0.5)),
+            1 => self.for_each_voice(|v| v.osc_a.set_pulse(value > 0.5)),
+            2 => self.for_each_voice(|v| v.osc_a_pw = value),
+            // Oscillator B
+            3 => self.for_each_voice(|v| v.osc_b.set_saw(value > 0.5)),
+            4 => self.for_each_voice(|v| v.osc_b.set_tri(value > 0.5)),
+            5 => self.for_each_voice(|v| v.osc_b.set_pulse(value > 0.5)),
+            6 => self.for_each_voice(|v| v.osc_b_pw = value),
+            7 => self.for_each_voice(|v| v.osc_b_semitones = value),
+            8 => self.for_each_voice(|v| v.osc_b_fine = value),
+            // Mixer
+            9 => self.for_each_voice(|v| v.osc_a_level = value),
+            10 => self.for_each_voice(|v| v.osc_b_level = value),
+            11 => self.for_each_voice(|v| v.noise_level = value),
+            // Filter
+            12 => self.for_each_voice(|v| v.filter_cutoff = value),
+            13 => self.for_each_voice(|v| v.filter.set_resonance(value * 4.0)),
+            14 => self.for_each_voice(|v| v.filter_env_amount = value),
+            15 => self.for_each_voice(|v| v.filter_drive = value),
+            // Filter Envelope
+            16 => self.for_each_voice(|v| v.filter_env.set_attack(value)),
+            17 => self.for_each_voice(|v| v.filter_env.set_decay(value)),
+            18 => self.for_each_voice(|v| v.filter_env.set_sustain(value)),
+            19 => self.for_each_voice(|v| v.filter_env.set_release(value)),
+            // Amp Envelope
+            20 => self.for_each_voice(|v| v.amp_env.set_attack(value)),
+            21 => self.for_each_voice(|v| v.amp_env.set_decay(value)),
+            22 => self.for_each_voice(|v| v.amp_env.set_sustain(value)),
+            23 => self.for_each_voice(|v| v.amp_env.set_release(value)),
+            // Sync
+            24 => self.for_each_voice(|v| v.sync_enabled = value > 0.5),
+            // Poly Mod
+            25 => self.for_each_voice(|v| v.poly_mod_filt_env_amt = value),
+            26 => self.for_each_voice(|v| v.poly_mod_osc_b_amt = value),
+            27 => self.for_each_voice(|v| v.poly_mod_dest_freq_a = value > 0.5),
+            28 => self.for_each_voice(|v| v.poly_mod_dest_pw_a = value > 0.5),
+            29 => self.for_each_voice(|v| v.poly_mod_dest_filter = value > 0.5),
+            // LFO
+            30 => self.lfo.set_frequency(value),
+            31 => self.lfo.set_triangle(value > 0.5),
+            32 => self.lfo.set_sawtooth(value > 0.5),
+            33 => self.lfo.set_square(value > 0.5),
+            34 => self.lfo_initial_amount = value,
+            // Wheel Mod
+            35 => self.wheel_mod_source_mix = value,
+            36 => self.wheel_mod_dest_freq_a = value > 0.5,
+            37 => self.wheel_mod_dest_freq_b = value > 0.5,
+            38 => self.wheel_mod_dest_pw_a = value > 0.5,
+            39 => self.wheel_mod_dest_pw_b = value > 0.5,
+            40 => self.wheel_mod_dest_filter = value > 0.5,
+            // Master
+            41 => self.master_volume = value,
+            42 => self.for_each_voice(|v| v.set_glide_rate(value)),
+            43 => self.for_each_voice(|v| v.set_glide_enabled(value > 0.5)),
+            44 => self.unison = value > 0.5,
+            45 => self.for_each_voice(|v| v.set_drift_amount(value)),
+            // Mod wheel + pitch bend
+            46 => self.mod_wheel = value,
+            47 => self.pitch_bend = value,
+            _ => {}
+        }
+    }
+
+    fn set_master_volume(&mut self, vol: f32) { self.master_volume = vol; }
+    fn master_volume(&self) -> f32 { self.master_volume }
+}
+
+impl MelodicEngine for ProphetSynth {
+    fn note_on(&mut self, note: u8, velocity: u8) { self.note_on(note, velocity); }
+    fn note_off(&mut self, note: u8) { self.note_off(note); }
 }
 
 #[cfg(test)]
@@ -297,6 +427,38 @@ mod tests {
 
         let corr = audio_test_harness::correlation::cross_correlation(&buf_vibrato, &buf_plain);
         assert!(corr < 0.95, "Vibrato should change the sound (corr={corr:.3})");
+    }
+
+    #[test]
+    fn test_embedded_sequencer() {
+        let mut synth = setup_basic_synth(44100.0);
+        // Program a chord step
+        synth.sequencer.steps[0].gate = true;
+        synth.sequencer.steps[0].notes = [60, 64, 67, 0];
+        synth.sequencer.steps[0].num_notes = 3;
+        synth.sequencer.steps[0].velocity = 100;
+        synth.sequencer.set_length(1);
+        synth.sequencer.set_bpm(240.0);
+        synth.sequencer.play();
+
+        let buf = render(&mut synth, 0.5);
+        audio_test_harness::level::assert_not_silent(&buf, 0.01);
+    }
+
+    #[test]
+    fn test_seq_external_suppresses_notes() {
+        let mut synth = setup_basic_synth(44100.0);
+        synth.seq_external = true;
+        synth.sequencer.steps[0].gate = true;
+        synth.sequencer.steps[0].notes[0] = 60;
+        synth.sequencer.steps[0].num_notes = 1;
+        synth.sequencer.steps[0].velocity = 100;
+        synth.sequencer.set_length(1);
+        synth.sequencer.set_bpm(240.0);
+        synth.sequencer.play();
+
+        let buf = render(&mut synth, 0.5);
+        audio_test_harness::level::assert_silent(&buf, 0.001);
     }
 
     #[test]

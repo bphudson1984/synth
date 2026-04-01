@@ -194,6 +194,7 @@ dependencies = [
 name = "braids-dsp"
 version = "0.1.0"
 dependencies = [
+ "audio-test-harness",
  "dsp-common",
 ]
 
@@ -1939,6 +1940,7 @@ dependencies = [
 name = "tb303-dsp"
 version = "0.1.0"
 dependencies = [
+ "audio-test-harness",
  "dsp-common",
 ]
 
@@ -1946,6 +1948,7 @@ dependencies = [
 name = "tb303-wasm"
 version = "0.1.0"
 dependencies = [
+ "dsp-common",
  "tb303-dsp",
 ]
 

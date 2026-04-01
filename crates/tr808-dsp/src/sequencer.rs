@@ -50,6 +50,7 @@ pub struct Sequencer {
 
     pub bpm: f32,       // 30-300
     pub swing: f32,     // 0-1
+    time_div: u8,       // 0=1/4, 1=1/8, 2=1/16, 3=1/32
 }
 
 /// Events emitted by the sequencer each sample.
@@ -70,16 +71,21 @@ impl Sequencer {
             trigger_pending: false,
             bpm: 120.0,
             swing: 0.5,
+            time_div: 2,
         };
         seq.update_timing();
         seq
     }
 
     fn update_timing(&mut self) {
-        // 16th note steps at the given BPM
         let beats_per_sec = self.bpm / 60.0;
-        let sixteenth_per_sec = beats_per_sec * 4.0;
-        self.samples_per_step = self.sample_rate / sixteenth_per_sec;
+        let div = match self.time_div { 0 => 1.0, 1 => 2.0, 2 => 4.0, _ => 8.0 };
+        self.samples_per_step = self.sample_rate / beats_per_sec / div;
+    }
+
+    pub fn set_time_div(&mut self, div: u8) {
+        self.time_div = div.min(3);
+        self.update_timing();
     }
 
     pub fn play(&mut self) {
