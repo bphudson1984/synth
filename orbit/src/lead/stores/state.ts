@@ -8,7 +8,7 @@ import {
 import { LEAD_PRESETS } from '../presets';
 import { registerMixerCallback } from '../../shared/stores/mixer';
 import type { NoteSequencerStore } from '../../shared/stores/noteSequencer';
-import { bpm, isPlaying, registerEngine } from '../../shared/stores/transport';
+import { bpm, isPlaying, isRecording, registerEngine } from '../../shared/stores/transport';
 
 let engine: BraidsEngine | null = null;
 export function setLeadEngine(e: BraidsEngine) {
@@ -111,8 +111,8 @@ export function triggerPad(padIndex: number) {
     triggeredNotes.update(s => { s.add(padIndex); return new Set(s); });
     setTimeout(() => { triggeredNotes.update(s => { s.delete(padIndex); return new Set(s); }); }, 150);
 
-    // When playing, pads only write to sequencer — don't play directly
-    if (get(isPlaying)) return;
+    // When playing and not recording, pads only trigger visual — don't play
+    if (get(isPlaying) && !get(isRecording)) return;
 
     const mode = get(padMode);
     let notes: number[];
@@ -179,8 +179,8 @@ export function setSeqPage(page: number) {
     seqCurrentPage.set(Math.max(0, Math.min(page, pages - 1)));
 }
 
-export function setSeqStepFromPad(padIndex: number) {
-    const step = get(seqSelectedStep);
+export function setSeqStepFromPad(padIndex: number, targetStep?: number) {
+    const step = targetStep ?? get(seqSelectedStep);
     const mode = get(padMode);
     let notes: number[];
     let label: string;

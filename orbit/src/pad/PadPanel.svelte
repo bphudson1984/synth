@@ -6,6 +6,7 @@
         currentPresetIndex, arpEnabled, padSeq,
         selectChord, selectPadParam, triggerChord, setPadSliderValue, loadPreset, toggleArp,
     } from './stores/state';
+    import { isPlaying, isRecording } from '../shared/stores/transport';
     import { get } from 'svelte/store';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
@@ -31,15 +32,23 @@
     function handlePadClick(i: number) {
         selectChord(i);
         triggerChord(i);
-        // Write chord to sequencer step
+
+        if (!get(isRecording)) return; // record off: just play sound
+
         const chord = CHORDS[i];
-        padSeq.setSeqStepFromNotes([...chord.notes], chord.label);
-        const cur = get(padSeq.seqSelectedStep);
-        const page = get(padSeq.seqCurrentPage);
-        const pageStart = page * 16;
-        const pageEnd = pageStart + 15;
-        if (cur < pageEnd) { padSeq.selectSeqStep(cur + 1); }
-        else { padSeq.selectSeqStep(pageStart); }
+        if (get(isPlaying)) {
+            // Real-time record: write to the step the playhead is on
+            padSeq.setStepFromNotes(get(padSeq.seqCurrentStep), [...chord.notes], chord.label);
+        } else {
+            // Step-entry: write to selected step, advance
+            padSeq.setSeqStepFromNotes([...chord.notes], chord.label);
+            const cur = get(padSeq.seqSelectedStep);
+            const page = get(padSeq.seqCurrentPage);
+            const pageStart = page * 16;
+            const pageEnd = pageStart + 15;
+            if (cur < pageEnd) { padSeq.selectSeqStep(cur + 1); }
+            else { padSeq.selectSeqStep(pageStart); }
+        }
     }
 
     function handlePresetChange(e: Event) {

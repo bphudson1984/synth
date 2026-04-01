@@ -10,6 +10,7 @@
     } from './stores/state';
     import { LEAD_PRESETS } from './presets';
     import { get } from 'svelte/store';
+    import { isPlaying, isRecording } from '../shared/stores/transport';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
@@ -44,13 +45,22 @@
 
     function handlePadClick(i: number) {
         triggerPad(i);
-        setSeqStepFromPad(i);
-        const cur = get(leadSeq.seqSelectedStep);
-        const page = get(leadSeq.seqCurrentPage);
-        const pageStart = page * 16;
-        const pageEnd = pageStart + 15;
-        if (cur < pageEnd) { leadSeq.selectSeqStep(cur + 1); }
-        else { leadSeq.selectSeqStep(pageStart); }
+
+        if (!get(isRecording)) return; // record off: just play sound
+
+        if (get(isPlaying)) {
+            // Real-time record: write to the step the playhead is on
+            setSeqStepFromPad(i, get(leadSeq.seqCurrentStep));
+        } else {
+            // Step-entry: write to selected step, advance
+            setSeqStepFromPad(i);
+            const cur = get(leadSeq.seqSelectedStep);
+            const page = get(leadSeq.seqCurrentPage);
+            const pageStart = page * 16;
+            const pageEnd = pageStart + 15;
+            if (cur < pageEnd) { leadSeq.selectSeqStep(cur + 1); }
+            else { leadSeq.selectSeqStep(pageStart); }
+        }
     }
 </script>
 

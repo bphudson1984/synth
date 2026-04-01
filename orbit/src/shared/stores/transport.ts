@@ -6,6 +6,7 @@ export const MAX_BPM = 200;
 
 export const bpm = writable(DEFAULT_BPM);
 export const isPlaying = writable(false);
+export const isRecording = writable(false);
 
 // Registry of play/stop callbacks from each engine
 type TransportCallbacks = {
@@ -27,4 +28,8 @@ export function togglePlay() {
     } else {
         for (const e of engines) e.stop();
     }
+}
+
+export function toggleRecord() {
+    isRecording.update(v => !v);
 }
