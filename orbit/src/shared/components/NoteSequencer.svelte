@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { NoteSequencerStore, SeqStep } from '../stores/noteSequencer';
-    import { isPlaying } from '../stores/transport';
+    import { isPlaying, isRecording, toggleRecord } from '../stores/transport';
 
     import { writable } from 'svelte/store';
 
@@ -18,6 +18,7 @@
     $: sel = $selStore;
     $: cur = $curStore;
     $: playing = $isPlaying;
+    $: recording = $isRecording;
     $: numPages = $numPagesStore;
     $: page = $pageStore;
 
@@ -136,6 +137,12 @@
             </div>
         {/each}
     </div>
+    <div class="seq-footer">
+        <button class="rec-btn" class:active={recording} onclick={toggleRecord}>
+            <span class="rec-dot"></span>
+            Record
+        </button>
+    </div>
 </div>
 
 <style>
@@ -147,6 +154,11 @@
     .add-page-btn { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--orbit-border, #444); background: transparent; color: var(--orbit-hint, #666); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .add-page-btn:active { background: var(--seq-colour); color: #fff; border-color: var(--seq-colour); }
     .add-page-btn:disabled { opacity: 0.3; cursor: default; }
+    .seq-footer { display: flex; justify-content: center; padding: 6px 0 2px; }
+    .rec-btn { display: flex; align-items: center; gap: 5px; border-radius: 14px; border: 1px solid var(--orbit-border, #444); background: transparent; color: var(--orbit-hint, #777); cursor: pointer; padding: 4px 12px; font-size: 10px; font-family: inherit; font-weight: 500; letter-spacing: 0.5px; transition: all 200ms; }
+    .rec-btn.active { border-color: #ee3333; color: #ee3333; }
+    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #662222; transition: background 200ms, box-shadow 200ms; }
+    .rec-btn.active .rec-dot { background: #ee3333; box-shadow: 0 0 6px #ee3333; }
     .scroller { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
     .scroller::-webkit-scrollbar { display: none; }
     .page { flex: 0 0 100%; scroll-snap-align: start; box-sizing: border-box; }

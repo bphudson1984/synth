@@ -85,6 +85,11 @@ export function createNoteSequencerStore() {
         engine?.setStepNotes(step, notes);
     }
 
+    function setStepFromNotes(stepIndex: number, notes: number[], label: string) {
+        seqSteps.update(s => { s[stepIndex] = { ...s[stepIndex], notes, gate: true, label }; return [...s]; });
+        engine?.setStepNotes(stepIndex, notes);
+    }
+
     function toggleSeqStepGate(step: number) {
         seqSteps.update(s => { s[step].gate = !s[step].gate; return [...s]; });
         engine?.setStepGate(step, get(seqSteps)[step].gate);
@@ -198,7 +203,7 @@ export function createNoteSequencerStore() {
         // Connection
         connectEngine, connectOnStep,
         // Actions
-        addSeqPage, setSeqPage, selectSeqStep, setSeqStepFromNotes,
+        addSeqPage, setSeqPage, selectSeqStep, setSeqStepFromNotes, setStepFromNotes,
         toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
         setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
         setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
