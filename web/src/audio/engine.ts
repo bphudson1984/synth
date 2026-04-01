@@ -2,6 +2,7 @@ export class AudioEngine {
     private ctx: AudioContext | null = null;
     private node: AudioWorkletNode | null = null;
     private _ready = false;
+    private visibilityHandler: (() => void) | null = null;
 
     get ready() { return this._ready; }
 
@@ -17,11 +18,15 @@ export class AudioEngine {
 
         // Re-resume the context when the page becomes visible again.
         // iOS suspends the AudioContext when the browser tab is backgrounded.
-        document.addEventListener('visibilitychange', () => {
+        if (this.visibilityHandler) {
+            document.removeEventListener('visibilitychange', this.visibilityHandler);
+        }
+        this.visibilityHandler = () => {
             if (document.visibilityState === 'visible' && this.ctx?.state === 'suspended') {
                 this.ctx.resume();
             }
-        });
+        };
+        document.addEventListener('visibilitychange', this.visibilityHandler);
 
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)
