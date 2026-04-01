@@ -308,3 +308,205 @@ impl NoteSequencer {
         self.length = PAGE_SIZE;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn collect_events(seq: &mut NoteSequencer, num_samples: usize) -> Vec<NoteSeqEvent> {
+        let mut all_events = Vec::new();
+        let mut frame_events = Vec::new();
+        for _ in 0..num_samples {
+            frame_events.clear();
+            seq.process(&mut frame_events);
+            all_events.extend(frame_events.drain(..));
+        }
+        all_events
+    }
+
+    #[test]
+    fn test_stopped_produces_no_events() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].num_notes = 1;
+        let events = collect_events(&mut seq, 44100);
+        assert!(events.is_empty());
+    }
+
+    #[test]
+    fn test_single_step_triggers_note_on() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes[0] = 60;
+        seq.steps[0].num_notes = 1;
+        seq.steps[0].velocity = 100;
+        seq.set_length(1);
+        seq.set_bpm(120.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 44100);
+        let note_ons: Vec<_> = events.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOn { .. })).collect();
+        assert!(!note_ons.is_empty(), "should have at least one NoteOn");
+    }
+
+    #[test]
+    fn test_gate_off_step_skipped() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = false;
+        seq.steps[0].num_notes = 1;
+        seq.set_length(1);
+        seq.set_bpm(240.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 22050);
+        let note_ons: Vec<_> = events.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOn { .. })).collect();
+        assert!(note_ons.is_empty(), "gate=false should produce no NoteOn");
+    }
+
+    #[test]
+    fn test_note_off_after_gate() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes[0] = 60;
+        seq.steps[0].num_notes = 1;
+        seq.steps[0].velocity = 100;
+        seq.steps[0].gate_pct = 50;
+        seq.set_length(1);
+        seq.set_bpm(120.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 44100);
+        let note_offs: Vec<_> = events.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOff)).collect();
+        assert!(!note_offs.is_empty(), "should have NoteOff after gate expires");
+    }
+
+    #[test]
+    fn test_skip_step() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes[0] = 60;
+        seq.steps[0].num_notes = 1;
+        seq.steps[0].skip = true;
+        seq.set_length(1);
+        seq.set_bpm(240.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 22050);
+        let note_ons: Vec<_> = events.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOn { .. })).collect();
+        assert!(note_ons.is_empty(), "skip=true should produce no NoteOn");
+    }
+
+    #[test]
+    fn test_velocity_passed_through() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes[0] = 60;
+        seq.steps[0].num_notes = 1;
+        seq.steps[0].velocity = 77;
+        seq.set_length(1);
+        seq.set_bpm(240.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 22050);
+        for e in &events {
+            if let NoteSeqEvent::NoteOn { velocity, .. } = e {
+                assert_eq!(*velocity, 77);
+                return;
+            }
+        }
+        panic!("no NoteOn event found");
+    }
+
+    #[test]
+    fn test_multi_note_step() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes = [60, 64, 67, 0];
+        seq.steps[0].num_notes = 3;
+        seq.steps[0].velocity = 100;
+        seq.set_length(1);
+        seq.set_bpm(240.0);
+        seq.play();
+
+        let events = collect_events(&mut seq, 22050);
+        for e in &events {
+            if let NoteSeqEvent::NoteOn { notes, num_notes, .. } = e {
+                assert_eq!(*num_notes, 3);
+                assert_eq!(notes[0], 60);
+                assert_eq!(notes[1], 64);
+                assert_eq!(notes[2], 67);
+                return;
+            }
+        }
+        panic!("no NoteOn event found");
+    }
+
+    #[test]
+    fn test_direction_reverse() {
+        let mut seq = NoteSequencer::new(44100.0);
+        for i in 0..4 {
+            seq.steps[i].gate = true;
+            seq.steps[i].notes[0] = 60 + i as u8;
+            seq.steps[i].num_notes = 1;
+            seq.steps[i].velocity = 100;
+        }
+        seq.set_length(4);
+        seq.direction = 1; // reverse
+        seq.set_bpm(240.0);
+        seq.play();
+
+        // Collect note values in order
+        let events = collect_events(&mut seq, 88200);
+        let notes: Vec<u8> = events.iter().filter_map(|e| {
+            if let NoteSeqEvent::NoteOn { notes, .. } = e { Some(notes[0]) } else { None }
+        }).collect();
+
+        // First note should be the last step (63), then descending
+        assert!(notes.len() >= 4, "should have at least 4 notes, got {}", notes.len());
+        assert_eq!(notes[0], 63, "reverse should start from last step");
+    }
+
+    #[test]
+    fn test_clear_resets_steps() {
+        let mut seq = NoteSequencer::new(44100.0);
+        seq.steps[0].gate = true;
+        seq.steps[0].notes[0] = 72;
+        seq.steps[0].num_notes = 1;
+        seq.clear();
+        assert!(!seq.steps[0].gate);
+    }
+
+    #[test]
+    fn test_bpm_affects_timing() {
+        // Fast BPM should produce more events in same time period
+        // Use 4 steps so we can count multiple loops
+        let samples = 44100 * 3; // 3 seconds
+
+        let mut seq_fast = NoteSequencer::new(44100.0);
+        seq_fast.steps[0].gate = true;
+        seq_fast.steps[0].num_notes = 1;
+        seq_fast.steps[0].velocity = 100;
+        seq_fast.steps[0].gate_pct = 25; // short gate so NoteOff happens quickly
+        seq_fast.set_length(4); // 4 steps to cycle through
+        seq_fast.set_bpm(240.0);
+        seq_fast.play();
+        let events_fast = collect_events(&mut seq_fast, samples);
+        let ons_fast = events_fast.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOn { .. })).count();
+
+        let mut seq_slow = NoteSequencer::new(44100.0);
+        seq_slow.steps[0].gate = true;
+        seq_slow.steps[0].num_notes = 1;
+        seq_slow.steps[0].velocity = 100;
+        seq_slow.steps[0].gate_pct = 25;
+        seq_slow.set_length(4);
+        seq_slow.set_bpm(60.0);
+        seq_slow.play();
+        let events_slow = collect_events(&mut seq_slow, samples);
+        let ons_slow = events_slow.iter().filter(|e| matches!(e, NoteSeqEvent::NoteOn { .. })).count();
+
+        assert!(
+            ons_fast > ons_slow,
+            "240bpm ({ons_fast} notes) should trigger more than 60bpm ({ons_slow} notes)"
+        );
+    }
+}

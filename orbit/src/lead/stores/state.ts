@@ -129,7 +129,7 @@ export function triggerPad(padIndex: number) {
         // Direct mode: play notes immediately
         releaseAll();
         activeNotes = notes;
-        for (const n of notes) engine?.noteOn(n, 100);
+        for (const n of notes) engine?.noteOn(n, 127);
 
         if (!get(latchEnabled)) {
             const toRelease = [...notes];
@@ -304,8 +304,14 @@ export function loadLeadPreset(index: number) {
     const newSteps = preset.steps.map(s => ({ ...s }));
     seqSteps.set(newSteps);
     for (let i = 0; i < newSteps.length; i++) {
-        if (newSteps[i].gate) {
-            engine.setStepNotes(i, newSteps[i].notes);
+        const s = newSteps[i];
+        if (s.gate) {
+            engine.setStepNotes(i, s.notes);
+            engine.setStepVelocity(i, Math.round(s.velocity * 1.27));
+            engine.setStepGatePct(i, s.gatePct);
+            engine.setStepProbability(i, s.probability);
+            engine.setStepRatchet(i, s.ratchet);
+            if (s.skip) engine.setStepSkip(i, true);
         }
     }
     // Load synth params
@@ -465,7 +471,7 @@ function arpTick() {
     const octaves = get(arpOctaves);
     const note = arpNotes[arpIndex % arpNotes.length] + arpOctave * 12;
     activeNotes = [note];
-    engine.noteOn(note, 100);
+    engine.noteOn(note, 127);
 
     // Advance
     const mode = get(arpMode);

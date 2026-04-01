@@ -5,6 +5,7 @@ pub mod ad_envelope;
 pub mod pitch_envelope;
 pub mod bitcrusher;
 pub mod note_sequencer;
+pub mod engine;
 
 use std::f32::consts::PI;
 

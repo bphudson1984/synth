@@ -1,3 +1,4 @@
+use dsp_common::engine::{SynthEngine, TriggerEngine};
 use crate::{
     bass_drum::BassDrum909, snare::SnareDrum909,
     hihat::{ClosedHiHat909, OpenHiHat909},
@@ -88,6 +89,57 @@ impl TR909 {
             + self.cc.process()
             + self.rc.process();
         (out * self.master_volume).clamp(-1.0, 1.0)
+    }
+
+    /// Set a per-voice parameter using (voice_id, param_id) addressing.
+    pub fn set_voice_param(&mut self, voice_id: u8, param_id: u8, value: f32) {
+        match (voice_id, param_id) {
+            (0, 0) => self.bd.level = value,
+            (0, 1) => self.bd.tone = value,
+            (0, 2) => self.bd.decay = value,
+            (1, 0) => self.sd.level = value,
+            (1, 1) => self.sd.tone = value,
+            (1, 2) => self.sd.snappy = value,
+            (2, 0) => self.lt.level = value,
+            (2, 1) => self.lt.tuning = value,
+            (3, 0) => self.mt.level = value,
+            (3, 1) => self.mt.tuning = value,
+            (4, 0) => self.ht.level = value,
+            (4, 1) => self.ht.tuning = value,
+            (5, 0) => self.rs.level = value,
+            (6, 0) => self.cp.level = value,
+            (7, 0) => self.ch.level = value,
+            (8, 0) => self.oh.level = value,
+            (8, 1) => self.oh.decay = value,
+            (9, 0) => self.cc.level = value,
+            (9, 1) => self.cc.decay = value,
+            (10, 0) => self.rc.level = value,
+            (10, 1) => self.rc.decay = value,
+            _ => {}
+        }
+    }
+}
+
+impl SynthEngine for TR909 {
+    fn process(&mut self) -> f32 { self.process() }
+
+    fn set_param(&mut self, id: u32, value: f32) {
+        if id == 255 {
+            self.master_volume = value;
+        } else {
+            let voice_id = (id / 16) as u8;
+            let param_id = (id % 16) as u8;
+            self.set_voice_param(voice_id, param_id, value);
+        }
+    }
+
+    fn set_master_volume(&mut self, vol: f32) { self.master_volume = vol; }
+    fn master_volume(&self) -> f32 { self.master_volume }
+}
+
+impl TriggerEngine for TR909 {
+    fn trigger(&mut self, voice: u8) {
+        if let Some(v) = Voice909::from_u8(voice) { self.trigger(v); }
     }
 }
 

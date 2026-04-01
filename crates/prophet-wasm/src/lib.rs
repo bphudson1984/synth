@@ -6,7 +6,7 @@ use prophet_dsp::effects::chorus::StereoChorus;
 use prophet_dsp::effects::delay::TapeDelay;
 use prophet_dsp::effects::reverb::PlateReverb;
 use prophet_dsp::arpeggiator::{Arpeggiator, ArpMode, ArpDivision};
-use dsp_common::note_sequencer::{NoteSequencer, NoteSeqEvent, MAX_STEPS, MAX_NOTES_PER_STEP};
+use dsp_common::note_sequencer::MAX_STEPS;
 
 static mut SYNTH: Option<ProphetSynth> = None;
 static mut CHORUS: Option<StereoChorus> = None;
@@ -14,11 +14,6 @@ static mut DELAY: Option<TapeDelay> = None;
 static mut REVERB: Option<PlateReverb> = None;
 static mut ARP: Option<Arpeggiator> = None;
 static mut ARP_LAST_NOTE: u8 = 0;
-static mut SEQ: Option<NoteSequencer> = None;
-static mut SEQ_EVENTS: Option<Vec<NoteSeqEvent>> = None;
-static mut SEQ_EXTERNAL: bool = false;
-static mut SEQ_LAST_NOTES: [u8; MAX_NOTES_PER_STEP] = [0; MAX_NOTES_PER_STEP];
-static mut SEQ_LAST_NUM_NOTES: u8 = 0;
 static mut LEFT_BUF: [f32; 256] = [0.0; 256];
 static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
@@ -47,8 +42,6 @@ pub extern "C" fn init(sample_rate: f32) {
         DELAY = Some(TapeDelay::new(sample_rate));
         REVERB = Some(PlateReverb::new(sample_rate));
         ARP = Some(Arpeggiator::new(sample_rate));
-        SEQ = Some(NoteSequencer::new(sample_rate));
-        SEQ_EVENTS = Some(Vec::with_capacity(4));
     }
 }
 
@@ -59,61 +52,22 @@ pub extern "C" fn process(num_samples: u32) {
         let chorus = CHORUS.as_mut().unwrap();
         let delay = DELAY.as_mut().unwrap();
         let reverb = REVERB.as_mut().unwrap();
-
         let arp = ARP.as_mut().unwrap();
-        let seq = SEQ.as_mut().unwrap();
 
         let n = (num_samples as usize).min(256);
         for i in 0..n {
-            // Sequencer generates note events
-            let events = SEQ_EVENTS.as_mut().unwrap();
-            events.clear();
-            seq.process(events);
-            if !SEQ_EXTERNAL {
-                for ev in events.iter() {
-                    match ev {
-                        NoteSeqEvent::NoteOn { notes, num_notes, velocity } => {
-                            if *num_notes > 0 {
-                                // Release previous sequencer notes
-                                for j in 0..SEQ_LAST_NUM_NOTES as usize {
-                                    synth.note_off(SEQ_LAST_NOTES[j]);
-                                }
-                                // Play all notes in the step (chords)
-                                for j in 0..*num_notes as usize {
-                                    synth.note_on(notes[j], *velocity);
-                                }
-                                SEQ_LAST_NOTES = *notes;
-                                SEQ_LAST_NUM_NOTES = *num_notes;
-                            }
-                        }
-                        NoteSeqEvent::NoteOff => {
-                            for j in 0..SEQ_LAST_NUM_NOTES as usize {
-                                synth.note_off(SEQ_LAST_NOTES[j]);
-                            }
-                            SEQ_LAST_NUM_NOTES = 0;
-                        }
-                    }
-                }
-            }
-
             // Arpeggiator generates note events
             if let Some((note, vel)) = arp.process() {
                 if vel > 0 {
-                    // Note off previous arp note, note on new one
-                    if ARP_LAST_NOTE > 0 {
-                        synth.note_off(ARP_LAST_NOTE);
-                    }
+                    if ARP_LAST_NOTE > 0 { synth.note_off(ARP_LAST_NOTE); }
                     synth.note_on(note, vel);
                     ARP_LAST_NOTE = note;
                 } else {
-                    // Gate off
-                    if ARP_LAST_NOTE > 0 {
-                        synth.note_off(ARP_LAST_NOTE);
-                        ARP_LAST_NOTE = 0;
-                    }
+                    if ARP_LAST_NOTE > 0 { synth.note_off(ARP_LAST_NOTE); ARP_LAST_NOTE = 0; }
                 }
             }
 
+            // Synth process (includes embedded sequencer)
             let dry = synth.process();
             let (ch_l, ch_r) = chorus.process(dry);
             let (dl_l, dl_r) = delay.process(ch_l, ch_r);
@@ -124,15 +78,8 @@ pub extern "C" fn process(num_samples: u32) {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn get_left_ptr() -> *const f32 {
-    unsafe { LEFT_BUF.as_ptr() }
-}
-
-#[no_mangle]
-pub extern "C" fn get_right_ptr() -> *const f32 {
-    unsafe { RIGHT_BUF.as_ptr() }
-}
+#[no_mangle] pub extern "C" fn get_left_ptr() -> *const f32 { unsafe { LEFT_BUF.as_ptr() } }
+#[no_mangle] pub extern "C" fn get_right_ptr() -> *const f32 { unsafe { RIGHT_BUF.as_ptr() } }
 
 #[no_mangle]
 pub extern "C" fn note_on(note: u8, velocity: u8) {
@@ -158,161 +105,81 @@ pub extern "C" fn note_off(note: u8) {
     }
 }
 
-/// Generic parameter setter. ID maps to specific synth/effect parameters.
+/// Generic parameter setter. IDs 0-47 are synth params (delegated to DSP),
+/// 50-59 are effects, 60-67 are arpeggiator.
 #[no_mangle]
 pub extern "C" fn set_param(id: u32, value: f32) {
     unsafe {
-        let synth = match SYNTH.as_mut() { Some(s) => s, None => return };
-        let chorus = match CHORUS.as_mut() { Some(c) => c, None => return };
-        let delay = match DELAY.as_mut() { Some(d) => d, None => return };
-        let reverb = match REVERB.as_mut() { Some(r) => r, None => return };
-
         match id {
-            // Oscillator A
-            0 => synth.for_each_voice(|v| v.osc_a.set_saw(value > 0.5)),
-            1 => synth.for_each_voice(|v| v.osc_a.set_pulse(value > 0.5)),
-            2 => synth.for_each_voice(|v| v.osc_a_pw = value),
-
-            // Oscillator B
-            3 => synth.for_each_voice(|v| v.osc_b.set_saw(value > 0.5)),
-            4 => synth.for_each_voice(|v| v.osc_b.set_tri(value > 0.5)),
-            5 => synth.for_each_voice(|v| v.osc_b.set_pulse(value > 0.5)),
-            6 => synth.for_each_voice(|v| v.osc_b_pw = value),
-            7 => synth.for_each_voice(|v| v.osc_b_semitones = value),
-            8 => synth.for_each_voice(|v| v.osc_b_fine = value),
-
-            // Mixer
-            9 => synth.for_each_voice(|v| v.osc_a_level = value),
-            10 => synth.for_each_voice(|v| v.osc_b_level = value),
-            11 => synth.for_each_voice(|v| v.noise_level = value),
-
-            // Filter
-            12 => synth.for_each_voice(|v| v.filter_cutoff = value),
-            13 => synth.for_each_voice(|v| v.filter.set_resonance(value * 4.0)),
-            14 => synth.for_each_voice(|v| v.filter_env_amount = value),
-            15 => synth.for_each_voice(|v| v.filter_drive = value),
-
-            // Filter Envelope
-            16 => synth.for_each_voice(|v| v.filter_env.set_attack(value)),
-            17 => synth.for_each_voice(|v| v.filter_env.set_decay(value)),
-            18 => synth.for_each_voice(|v| v.filter_env.set_sustain(value)),
-            19 => synth.for_each_voice(|v| v.filter_env.set_release(value)),
-
-            // Amp Envelope
-            20 => synth.for_each_voice(|v| v.amp_env.set_attack(value)),
-            21 => synth.for_each_voice(|v| v.amp_env.set_decay(value)),
-            22 => synth.for_each_voice(|v| v.amp_env.set_sustain(value)),
-            23 => synth.for_each_voice(|v| v.amp_env.set_release(value)),
-
-            // Sync
-            24 => synth.for_each_voice(|v| v.sync_enabled = value > 0.5),
-
-            // Poly Mod
-            25 => synth.for_each_voice(|v| v.poly_mod_filt_env_amt = value),
-            26 => synth.for_each_voice(|v| v.poly_mod_osc_b_amt = value),
-            27 => synth.for_each_voice(|v| v.poly_mod_dest_freq_a = value > 0.5),
-            28 => synth.for_each_voice(|v| v.poly_mod_dest_pw_a = value > 0.5),
-            29 => synth.for_each_voice(|v| v.poly_mod_dest_filter = value > 0.5),
-
-            // LFO
-            30 => synth.lfo.set_frequency(value),
-            31 => synth.lfo.set_triangle(value > 0.5),
-            32 => synth.lfo.set_sawtooth(value > 0.5),
-            33 => synth.lfo.set_square(value > 0.5),
-            34 => synth.lfo_initial_amount = value,
-
-            // Wheel Mod
-            35 => synth.wheel_mod_source_mix = value,
-            36 => synth.wheel_mod_dest_freq_a = value > 0.5,
-            37 => synth.wheel_mod_dest_freq_b = value > 0.5,
-            38 => synth.wheel_mod_dest_pw_a = value > 0.5,
-            39 => synth.wheel_mod_dest_pw_b = value > 0.5,
-            40 => synth.wheel_mod_dest_filter = value > 0.5,
-
-            // Master
-            41 => synth.master_volume = value,
-            42 => synth.for_each_voice(|v| v.set_glide_rate(value)),
-            43 => synth.for_each_voice(|v| v.set_glide_enabled(value > 0.5)),
-            44 => synth.unison = value > 0.5,
-            45 => synth.for_each_voice(|v| v.set_drift_amount(value)),
-
-            // Mod wheel + pitch bend (from MIDI)
-            46 => synth.mod_wheel = value,
-            47 => synth.pitch_bend = value,
-
+            0..=47 => {
+                use dsp_common::engine::SynthEngine;
+                if let Some(synth) = SYNTH.as_mut() { synth.set_param(id, value); }
+            }
             // Effects — Chorus
-            50 => chorus.rate = value,
-            51 => chorus.depth = value,
-            52 => chorus.mix = value,
-
+            50 => { CHORUS.as_mut().unwrap().rate = value; }
+            51 => { CHORUS.as_mut().unwrap().depth = value; }
+            52 => { CHORUS.as_mut().unwrap().mix = value; }
             // Effects — Delay
-            53 => delay.time_ms = value,
-            54 => delay.feedback = value,
-            55 => delay.tone = value,
-            56 => delay.mix = value,
-
+            53 => { DELAY.as_mut().unwrap().time_ms = value; }
+            54 => { DELAY.as_mut().unwrap().feedback = value; }
+            55 => { DELAY.as_mut().unwrap().tone = value; }
+            56 => { DELAY.as_mut().unwrap().mix = value; }
             // Effects — Reverb
-            57 => reverb.decay = value,
-            58 => reverb.damping = value,
-            59 => reverb.mix = value,
-
+            57 => { REVERB.as_mut().unwrap().decay = value; }
+            58 => { REVERB.as_mut().unwrap().damping = value; }
+            59 => { REVERB.as_mut().unwrap().mix = value; }
             // Arpeggiator (60-67)
-            60 => { let a = ARP.as_mut().unwrap(); a.mode = ArpMode::from_u8(value as u8); },
-            61 => { let a = ARP.as_mut().unwrap(); a.division = ArpDivision::from_u8(value as u8); },
-            62 => { let a = ARP.as_mut().unwrap(); a.bpm = value; },
-            63 => { let a = ARP.as_mut().unwrap(); a.octaves = (value as u8).clamp(1, 4); },
-            64 => { let a = ARP.as_mut().unwrap(); a.gate = value; },
-            65 => { let a = ARP.as_mut().unwrap(); a.swing = value; },
-            66 => { let a = ARP.as_mut().unwrap(); a.hold = value > 0.5; },
-            67 => { let a = ARP.as_mut().unwrap(); a.all_notes_off(); }, // panic button
-
-            _ => {} // unknown param
+            60 => { ARP.as_mut().unwrap().mode = ArpMode::from_u8(value as u8); }
+            61 => { ARP.as_mut().unwrap().division = ArpDivision::from_u8(value as u8); }
+            62 => { ARP.as_mut().unwrap().bpm = value; }
+            63 => { ARP.as_mut().unwrap().octaves = (value as u8).clamp(1, 4); }
+            64 => { ARP.as_mut().unwrap().gate = value; }
+            65 => { ARP.as_mut().unwrap().swing = value; }
+            66 => { ARP.as_mut().unwrap().hold = value > 0.5; }
+            67 => { ARP.as_mut().unwrap().all_notes_off(); }
+            _ => {}
         }
     }
 }
 
-// --- Note Sequencer ---
-#[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(s) = SEQ.as_mut() { s.play(); } } }
+// --- Note Sequencer (delegated to embedded synth.sequencer) ---
+#[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.play(); } } }
 #[no_mangle] pub extern "C" fn seq_stop() {
     unsafe {
-        if let Some(s) = SEQ.as_mut() { s.stop(); }
         if let Some(synth) = SYNTH.as_mut() {
-            for j in 0..SEQ_LAST_NUM_NOTES as usize {
-                synth.note_off(SEQ_LAST_NOTES[j]);
-            }
-            SEQ_LAST_NUM_NOTES = 0;
-            // Belt-and-suspenders: release all voices
+            synth.sequencer.stop();
+            // Release all voices
             for n in 0..128u8 { synth.note_off(n); }
         }
     }
 }
-#[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_bpm(bpm); } } }
-#[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(s) = SEQ.as_ref() { s.current_step() as u8 } else { 0 } } }
-#[no_mangle] pub extern "C" fn seq_clear() { unsafe { if let Some(s) = SEQ.as_mut() { s.clear(); } } }
-#[no_mangle] pub extern "C" fn seq_set_external(ext: u8) { unsafe { SEQ_EXTERNAL = ext != 0; } }
-#[no_mangle] pub extern "C" fn seq_set_length(len: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_length(len as usize); } } }
+#[no_mangle] pub extern "C" fn seq_set_bpm(bpm: f32) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.set_bpm(bpm); } } }
+#[no_mangle] pub extern "C" fn seq_get_current_step() -> u8 { unsafe { if let Some(s) = SYNTH.as_ref() { s.sequencer.current_step() as u8 } else { 0 } } }
+#[no_mangle] pub extern "C" fn seq_clear() { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.clear(); } } }
+#[no_mangle] pub extern "C" fn seq_set_external(ext: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.seq_external = ext != 0; } } }
+#[no_mangle] pub extern "C" fn seq_set_length(len: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.set_length(len as usize); } } }
 #[no_mangle] pub extern "C" fn seq_set_step_notes(step: u8, num: u8, n1: u8, n2: u8, n3: u8, n4: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].notes = [n1, n2, n3, n4]; s.steps[i].num_notes = num.min(4); s.steps[i].gate = true; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].notes = [n1, n2, n3, n4]; s.sequencer.steps[i].num_notes = num.min(4); s.sequencer.steps[i].gate = true; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_gate(step: u8, gate: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].gate = gate != 0; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].gate = gate != 0; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_velocity(step: u8, vel: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].velocity = vel; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].velocity = vel; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_gate_pct(step: u8, pct: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].gate_pct = pct; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].gate_pct = pct; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_probability(step: u8, prob: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].probability = prob; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].probability = prob; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_ratchet(step: u8, count: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].ratchet = count.clamp(1, 4); } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].ratchet = count.clamp(1, 4); } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_skip(step: u8, skip: u8) {
-    unsafe { if let Some(s) = SEQ.as_mut() { let i = step as usize; if i < MAX_STEPS { s.steps[i].skip = skip != 0; } } }
+    unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].skip = skip != 0; } } }
 }
-#[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.direction = dir; } } }
-#[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(s) = SEQ.as_mut() { s.swing = swing.clamp(0.0, 1.0); } } }
-#[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(s) = SEQ.as_mut() { s.set_time_div(div); } } }
-#[no_mangle] pub extern "C" fn seq_rotate(dir: i32) { unsafe { if let Some(s) = SEQ.as_mut() { s.rotate(dir); } } }
+#[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.direction = dir; } } }
+#[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.swing = swing.clamp(0.0, 1.0); } } }
+#[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.set_time_div(div); } } }
+#[no_mangle] pub extern "C" fn seq_rotate(dir: i32) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.rotate(dir); } } }

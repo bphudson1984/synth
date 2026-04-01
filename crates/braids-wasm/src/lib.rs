@@ -39,28 +39,9 @@ pub extern "C" fn note_off(note: u8) {
 #[no_mangle]
 pub extern "C" fn set_param(id: u8, value: f32) {
     unsafe {
-        let e = match ENGINE.as_mut() { Some(e) => e, None => return };
-        match id {
-            0 => e.set_mode(value as u8),
-            1 => e.timbre = value,
-            2 => e.color = value,
-            3 => e.filter_cutoff = value,
-            4 => e.filter_resonance = value,
-            5 => e.filter_env_amt = value,
-            6 => e.amp_env.set_attack(value),
-            7 => e.amp_env.set_decay(value),
-            8 => e.amp_env.set_sustain(value),
-            9 => e.amp_env.set_release(value),
-            10 => e.set_lfo_rate(value),
-            11 => e.lfo_amount = value,
-            12 => e.lfo_dest = value as u8,
-            13 => e.master_volume = value,
-            14 => e.set_glide_time(value),
-            15 => e.filter_env.set_attack(value),
-            16 => e.filter_env.set_decay(value),
-            17 => e.filter_env.set_sustain(value),
-            18 => e.filter_env.set_release(value),
-            _ => {}
+        if let Some(e) = ENGINE.as_mut() {
+            use dsp_common::engine::SynthEngine;
+            e.set_param(id as u32, value);
         }
     }
 }

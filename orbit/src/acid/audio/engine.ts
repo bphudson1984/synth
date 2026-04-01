@@ -1,51 +1,23 @@
-import { getAudioContext } from '../../shared/audio/context';
+import { BaseEngine } from '../../shared/audio/BaseEngine';
 
-export class AcidEngine {
-    private node: AudioWorkletNode | null = null;
-    private panner: StereoPannerNode | null = null;
-    private _ready = false;
-    get ready() { return this._ready; }
-    onStep: ((step: number) => void) | null = null;
-
+export class AcidEngine extends BaseEngine {
     async init(): Promise<void> {
-        const ctx = await getAudioContext();
-        const wasmResponse = await fetch(import.meta.env.BASE_URL + 'tb303.wasm');
-        if (!wasmResponse.ok) {
-            throw new Error(`Failed to fetch tb303.wasm: ${wasmResponse.status} ${wasmResponse.statusText}`);
-        }
-        // Send raw bytes instead of compiled WebAssembly.Module — Chrome silently
-        // drops Module objects posted to AudioWorklet threads, causing init to hang.
-        const wasmBytes = await wasmResponse.arrayBuffer();
-        this.node = new AudioWorkletNode(ctx, 'tb303-processor', {
-            outputChannelCount: [2], numberOfOutputs: 1,
-        });
-        await new Promise<void>((resolve) => {
-            this.node!.port.onmessage = (e) => {
-                if (e.data.type === 'ready') { this._ready = true; resolve(); }
-                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
-            };
-            this.node!.port.postMessage(
-                { type: 'wasm-bytes', bytes: wasmBytes },
-                [wasmBytes]
-            );
-        });
-        this.panner = ctx.createStereoPanner();
-        this.node.connect(this.panner);
-        this.panner.connect(ctx.destination);
+        await this.initWorklet('tb303-processor', 'tb303.wasm');
     }
 
-    setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
+    noteOn(note: number, velocity: number) { this.node?.port.postMessage({ type: 'note-on', note, velocity }); }
+    noteOff(note: number) { this.node?.port.postMessage({ type: 'note-off', note }); }
 
-    setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
-    seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
-    seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
-    seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
-    seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
-
+    // Acid-specific step methods
     setStepNote(step: number, note: number) { this.node?.port.postMessage({ type: 'seq-set-step-note', step, note }); }
     setStepGate(step: number, gate: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-gate', step, gate }); }
     setStepAccent(step: number, accent: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-accent', step, accent }); }
     setStepSlide(step: number, slide: boolean) { this.node?.port.postMessage({ type: 'seq-set-step-slide', step, slide }); }
+
+    // Pattern controls (new — matches melodic sequencers)
+    setDirection(dir: number) { this.node?.port.postMessage({ type: 'seq-set-direction', value: dir }); }
+    setSwing(swing: number) { this.node?.port.postMessage({ type: 'seq-set-swing', value: swing }); }
+    setTimeDivision(div: number) { this.node?.port.postMessage({ type: 'seq-set-time-div', value: div }); }
 }
 
 export const PARAM = {

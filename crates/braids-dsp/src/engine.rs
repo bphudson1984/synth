@@ -1,4 +1,5 @@
 use dsp_common::note_to_hz;
+use dsp_common::engine::{SynthEngine, MelodicEngine};
 use crate::macro_osc::MacroOscillator;
 use crate::models::OscMode;
 use crate::envelope::Envelope;
@@ -150,5 +151,182 @@ impl BraidsSynth {
 
         let amp = self.amp_env.process();
         filtered * amp * self.velocity * self.master_volume
+    }
+}
+
+impl SynthEngine for BraidsSynth {
+    fn process(&mut self) -> f32 { self.process() }
+
+    fn set_param(&mut self, id: u32, value: f32) {
+        match id {
+            0 => self.set_mode(value as u8),
+            1 => self.timbre = value,
+            2 => self.color = value,
+            3 => self.filter_cutoff = value,
+            4 => self.filter_resonance = value,
+            5 => self.filter_env_amt = value,
+            6 => self.amp_env.set_attack(value),
+            7 => self.amp_env.set_decay(value),
+            8 => self.amp_env.set_sustain(value),
+            9 => self.amp_env.set_release(value),
+            10 => self.set_lfo_rate(value),
+            11 => self.lfo_amount = value,
+            12 => self.lfo_dest = value as u8,
+            13 => self.master_volume = value,
+            14 => self.set_glide_time(value),
+            15 => self.filter_env.set_attack(value),
+            16 => self.filter_env.set_decay(value),
+            17 => self.filter_env.set_sustain(value),
+            18 => self.filter_env.set_release(value),
+            _ => {}
+        }
+    }
+
+    fn set_master_volume(&mut self, vol: f32) { self.master_volume = vol; }
+    fn master_volume(&self) -> f32 { self.master_volume }
+}
+
+impl MelodicEngine for BraidsSynth {
+    fn note_on(&mut self, note: u8, velocity: u8) { self.note_on(note, velocity); }
+    fn note_off(&mut self, note: u8) { self.note_off(note); }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn render(synth: &mut BraidsSynth, duration_secs: f32) -> Vec<f32> {
+        let sr = 44100.0;
+        let n = (sr * duration_secs) as usize;
+        (0..n).map(|_| synth.process()).collect()
+    }
+
+    fn setup() -> BraidsSynth {
+        let mut s = BraidsSynth::new(44100.0);
+        s.master_volume = 0.6;
+        s.filter_cutoff = 12000.0;
+        s
+    }
+
+    #[test]
+    fn test_note_on_produces_sound() {
+        let mut s = setup();
+        s.note_on(69, 127);
+        let buf = render(&mut s, 0.3);
+        audio_test_harness::level::assert_not_silent(&buf, 0.01);
+    }
+
+    #[test]
+    fn test_silence_when_idle() {
+        let mut s = setup();
+        let buf = render(&mut s, 0.1);
+        audio_test_harness::level::assert_silent(&buf, 0.001);
+    }
+
+    #[test]
+    fn test_note_off_decays_to_silence() {
+        let mut s = setup();
+        s.amp_env.set_release(0.01);
+        s.note_on(69, 127);
+        render(&mut s, 0.1);
+        s.note_off(69);
+        let buf = render(&mut s, 0.5);
+        audio_test_harness::level::assert_silent(&buf[22050..], 0.01);
+    }
+
+    #[test]
+    fn test_velocity_affects_amplitude() {
+        let mut s1 = setup();
+        s1.note_on(69, 127);
+        let buf_loud = render(&mut s1, 0.2);
+        let rms_loud = audio_test_harness::level::rms(&buf_loud[4410..]);
+
+        let mut s2 = setup();
+        s2.note_on(69, 40);
+        let buf_quiet = render(&mut s2, 0.2);
+        let rms_quiet = audio_test_harness::level::rms(&buf_quiet[4410..]);
+
+        assert!(
+            rms_loud > rms_quiet * 1.5,
+            "vel=127 ({rms_loud:.4}) should be louder than vel=40 ({rms_quiet:.4})"
+        );
+    }
+
+    #[test]
+    fn test_master_volume_scales_output() {
+        let mut s1 = setup();
+        s1.master_volume = 0.8;
+        s1.note_on(60, 100);
+        let buf1 = render(&mut s1, 0.2);
+        let rms1 = audio_test_harness::level::rms(&buf1[4410..]);
+
+        let mut s2 = setup();
+        s2.master_volume = 0.2;
+        s2.note_on(60, 100);
+        let buf2 = render(&mut s2, 0.2);
+        let rms2 = audio_test_harness::level::rms(&buf2[4410..]);
+
+        assert!(
+            rms1 > rms2 * 2.0,
+            "vol=0.8 ({rms1:.4}) should be >2x louder than vol=0.2 ({rms2:.4})"
+        );
+    }
+
+    #[test]
+    fn test_sequencer_triggers_notes() {
+        let mut s = setup();
+        // Program one step with a note
+        s.sequencer.steps[0].gate = true;
+        s.sequencer.steps[0].notes[0] = 60;
+        s.sequencer.steps[0].num_notes = 1;
+        s.sequencer.steps[0].velocity = 100;
+        s.sequencer.set_length(1);
+        s.sequencer.set_bpm(240.0); // fast for testing
+        s.sequencer.play();
+
+        let buf = render(&mut s, 0.5);
+        audio_test_harness::level::assert_not_silent(&buf, 0.01);
+    }
+
+    #[test]
+    fn test_seq_external_suppresses_notes() {
+        let mut s = setup();
+        s.seq_external = true;
+        s.sequencer.steps[0].gate = true;
+        s.sequencer.steps[0].notes[0] = 60;
+        s.sequencer.steps[0].num_notes = 1;
+        s.sequencer.steps[0].velocity = 100;
+        s.sequencer.set_length(1);
+        s.sequencer.set_bpm(240.0);
+        s.sequencer.play();
+
+        let buf = render(&mut s, 0.5);
+        audio_test_harness::level::assert_silent(&buf, 0.001);
+    }
+
+    #[test]
+    fn test_different_modes_produce_sound() {
+        for mode in 0..13u8 {
+            let mut s = setup();
+            s.set_mode(mode);
+            s.note_on(60, 100);
+            let buf = render(&mut s, 0.2);
+            audio_test_harness::level::assert_not_silent(
+                &buf,
+                0.001,
+            );
+        }
+    }
+
+    #[test]
+    fn test_glide_between_notes() {
+        let mut s = setup();
+        s.set_glide_time(0.1);
+        s.note_on(60, 100);
+        render(&mut s, 0.2);
+        s.note_on(72, 100);
+        let buf = render(&mut s, 0.05);
+        // Should still produce sound while gliding
+        audio_test_harness::level::assert_not_silent(&buf, 0.01);
     }
 }

@@ -31,19 +31,21 @@ pub extern "C" fn get_right_ptr() -> *const f32 { unsafe { RIGHT_BUF.as_ptr() } 
 #[no_mangle]
 pub extern "C" fn set_param(id: u8, value: f32) {
     unsafe {
-        let engine = match ENGINE.as_mut() { Some(e) => e, None => return };
-        match id {
-            0 => engine.voice.cutoff = value,
-            1 => engine.voice.resonance = value,
-            2 => engine.voice.env_mod = value,
-            3 => engine.voice.decay = value,
-            4 => engine.voice.accent_level = value,
-            5 => engine.voice.set_waveform(value < 0.5),
-            6 => engine.master_volume = value,
-            7 => engine.voice.distortion = value,
-            _ => {}
+        if let Some(e) = ENGINE.as_mut() {
+            use dsp_common::engine::SynthEngine;
+            e.set_param(id as u32, value);
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn note_on(note: u8, velocity: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.note_on(note, velocity); } }
+}
+
+#[no_mangle]
+pub extern "C" fn note_off(_note: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.note_off(); } }
 }
 
 #[no_mangle] pub extern "C" fn seq_play() { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.play(); } } }
@@ -76,3 +78,6 @@ pub extern "C" fn seq_set_step_accent(step: u8, accent: u8) {
 pub extern "C" fn seq_set_step_slide(step: u8, slide: u8) {
     unsafe { if let Some(e) = ENGINE.as_mut() { let s = step as usize; if s < NUM_STEPS { e.sequencer.steps[s].slide = slide != 0; } } }
 }
+#[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.direction = dir; } } }
+#[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.swing = swing.clamp(0.0, 1.0); } } }
+#[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_time_div(div); } } }

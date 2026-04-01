@@ -1,43 +1,14 @@
-import { getAudioContext } from '../../shared/audio/context';
+import { BaseEngine } from '../../shared/audio/BaseEngine';
 
-export class BraidsEngine {
-    private node: AudioWorkletNode | null = null;
-    private panner: StereoPannerNode | null = null;
-    private _ready = false;
-    get ready() { return this._ready; }
-    onStep: ((step: number) => void) | null = null;
-
+export class BraidsEngine extends BaseEngine {
     async init(): Promise<void> {
-        const ctx = await getAudioContext();
-        const wasmResponse = await fetch(import.meta.env.BASE_URL + 'braids-dsp.wasm');
-        if (!wasmResponse.ok) throw new Error(`Failed to fetch braids-dsp.wasm: ${wasmResponse.status}`);
-        const wasmBytes = await wasmResponse.arrayBuffer();
-        this.node = new AudioWorkletNode(ctx, 'braids-processor', {
-            outputChannelCount: [2], numberOfOutputs: 1,
-        });
-        await new Promise<void>((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('Braids worklet timeout')), 10000);
-            this.node!.port.onmessage = (e) => {
-                if (e.data.type === 'ready') { clearTimeout(timeout); this._ready = true; resolve(); }
-                if (e.data.type === 'error') { clearTimeout(timeout); reject(new Error(e.data.message)); }
-                if (e.data.type === 'step') { this.onStep?.(e.data.step); }
-            };
-            this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes }, [wasmBytes]);
-        });
-        this.panner = ctx.createStereoPanner();
-        this.node.connect(this.panner);
-        this.panner.connect(ctx.destination);
+        await this.initWorklet('braids-processor', 'braids-dsp.wasm');
     }
 
-    setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     noteOn(note: number, velocity: number) { this.node?.port.postMessage({ type: 'note-on', note, velocity }); }
     noteOff(note: number) { this.node?.port.postMessage({ type: 'note-off', note }); }
-    setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
 
-    seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
-    seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
-    seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
-    seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
+    // Sequencer step methods
     setStepNotes(step: number, notes: number[]) {
         this.node?.port.postMessage({
             type: 'seq-set-step-notes', step,

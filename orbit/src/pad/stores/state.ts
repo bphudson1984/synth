@@ -73,7 +73,7 @@ export function triggerChord(index: number) {
     // Play the new chord
     activeNotes = [...chord.notes];
     for (const note of chord.notes) {
-        engine?.noteOn(note, 100);
+        engine?.noteOn(note, 127);
     }
 
     // Visual trigger pulse
@@ -124,7 +124,7 @@ export function toggleArp() {
         engine?.setParam(PARAM.ARP_GATE, 0.5);
         // Re-send held notes so the arpeggiator picks them up
         for (const note of activeNotes) {
-            engine?.noteOn(note, 100);
+            engine?.noteOn(note, 127);
         }
     } else {
         // Release held notes from the arpeggiator, then disable
