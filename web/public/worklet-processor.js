@@ -3,6 +3,8 @@ class ProphetProcessor extends AudioWorkletProcessor {
         super();
         this.wasm = null;
         this.ready = false;
+        this.memoryBuf = null;
+        this.memoryView = null;
         this.port.onmessage = (e) => this.handleMessage(e.data);
     }
 
@@ -12,6 +14,8 @@ class ProphetProcessor extends AudioWorkletProcessor {
                 WebAssembly.instantiate(data.bytes, {}).then(result => {
                     this.wasm = result.instance.exports;
                     this.wasm.init(sampleRate);
+                    this.memoryBuf = this.wasm.memory.buffer;
+                    this.memoryView = new Float32Array(this.memoryBuf);
                     this.ready = true;
                     this.port.postMessage({ type: 'ready' });
                 }).catch(err => {
@@ -34,12 +38,16 @@ class ProphetProcessor extends AudioWorkletProcessor {
         if (!this.ready) return true;
 
         const output = outputs[0];
-        const numSamples = output[0].length;
+        const numSamples = Math.min(output[0].length, 256);
 
         this.wasm.process(numSamples);
 
-        // Read stereo output from WASM linear memory
-        const memory = new Float32Array(this.wasm.memory.buffer);
+        // Reuse cached memory view; recreate only if WASM memory grew
+        if (this.memoryBuf !== this.wasm.memory.buffer) {
+            this.memoryBuf = this.wasm.memory.buffer;
+            this.memoryView = new Float32Array(this.memoryBuf);
+        }
+        const memory = this.memoryView;
         const leftPtr = this.wasm.get_left_ptr() / 4;
         const rightPtr = this.wasm.get_right_ptr() / 4;
 
