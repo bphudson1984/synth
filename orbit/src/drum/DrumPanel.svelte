@@ -8,10 +8,12 @@
         loadDrumPreset, randomizeDrumPattern,
         switchDrumSequence, addDrumSequence, duplicateDrumSequence, deleteDrumSequence, toggleDrumChain, toggleDrumRandom,
     } from './stores/state';
+    import { drumGlitchSize, setDrumGlitch } from './stores/state';
     import { PRESETS } from './presets';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
+    import GlitchSlider from '../shared/components/GlitchSlider.svelte';
     import StepSequencer from './StepSequencer.svelte';
     import Transport from './Transport.svelte';
     import SequenceBankSelector from '../shared/components/SequenceBankSelector.svelte';
@@ -82,7 +84,9 @@
     onParamSelect={selectParam}
     {badge}
 />
-<PlayControls />
+<PlayControls>
+    <GlitchSlider glitchSize={drumGlitchSize} onGlitch={setDrumGlitch} colour="#378ADD" />
+</PlayControls>
 <Slider
     label={selParam}
     value={sliderVal}

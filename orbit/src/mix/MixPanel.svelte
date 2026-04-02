@@ -1,6 +1,8 @@
 <script lang="ts">
     import { channels, setVolume, setPan, toggleMute, toggleSolo, type ChannelId } from '../shared/stores/mixer';
+    import { mixGlitchSize, setMixGlitch } from '../shared/stores/transport';
     import PlayControls from '../shared/components/PlayControls.svelte';
+    import GlitchSlider from '../shared/components/GlitchSlider.svelte';
 
     $: ch = $channels;
 
@@ -83,7 +85,9 @@
             </div>
         {/each}
     </div>
-    <PlayControls />
+    <PlayControls>
+        <GlitchSlider glitchSize={mixGlitchSize} onGlitch={setMixGlitch} colour="#eee" />
+    </PlayControls>
 </div>
 
 <style>

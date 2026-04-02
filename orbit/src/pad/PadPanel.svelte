@@ -16,6 +16,7 @@
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
+    import GlitchSlider from '../shared/components/GlitchSlider.svelte';
     import NoteSequencer from '../shared/components/NoteSequencer.svelte';
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
@@ -149,7 +150,9 @@
         colour={PAD_COLOUR}
         onQuickSlotSelect={selectQuickSlot}
     />
-    <PlayControls />
+    <PlayControls>
+        <GlitchSlider glitchSize={padSeq.glitchSize} onGlitch={padSeq.setGlitch} colour="#E8944A" />
+    </PlayControls>
     <Slider
         label={qsLabel}
         value={qsValue}

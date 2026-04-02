@@ -61,6 +61,11 @@ pub struct NoteSequencer {
     sample_rate: f32,
     rng: u32,
     step_is_even: bool,
+    // Glitch mode: repeat last N steps
+    glitch_size: usize,    // 0=off, 1/2/4/8
+    glitch_start: usize,   // first step of glitch loop
+    glitch_pos: usize,     // current position within glitch loop
+    glitch_origin: usize,  // saved current_step to resume from
 }
 
 impl NoteSequencer {
@@ -78,6 +83,7 @@ impl NoteSequencer {
             direction: 0, swing: 0.0, time_div: 2, // default 1/16
             ping_dir: 1, bpm: 120.0, sample_rate, rng: 54321,
             step_is_even: false,
+            glitch_size: 0, glitch_start: 0, glitch_pos: 0, glitch_origin: 0,
         };
         seq.update_timing();
         seq
@@ -114,6 +120,30 @@ impl NoteSequencer {
     pub fn set_length(&mut self, len: usize) { self.length = len.clamp(PAGE_SIZE, MAX_STEPS); }
     pub fn current_step(&self) -> usize { self.display_step }
     pub fn is_playing(&self) -> bool { self.state == PlayState::Playing }
+
+    pub fn set_glitch(&mut self, size: usize) {
+        if size > 0 && self.glitch_size == 0 {
+            // Engaging glitch — save position, compute loop over last N steps
+            self.glitch_origin = self.current_step;
+            self.glitch_size = size;
+            self.glitch_start = (self.current_step + self.length - size) % self.length;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        } else if size == 0 && self.glitch_size > 0 {
+            // Releasing glitch — resume from saved position
+            self.glitch_size = 0;
+            self.current_step = self.glitch_origin;
+            self.display_step = self.glitch_origin;
+        } else if size > 0 && size != self.glitch_size {
+            // Changing glitch size while active
+            self.glitch_size = size;
+            self.glitch_start = (self.glitch_origin + self.length - size) % self.length;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        }
+    }
 
     fn update_timing(&mut self) {
         let beats_per_sec = self.bpm / 60.0;
@@ -160,6 +190,12 @@ impl NoteSequencer {
     }
 
     fn advance_step(&mut self) {
+        if self.glitch_size > 0 {
+            self.glitch_pos = (self.glitch_pos + 1) % self.glitch_size;
+            self.current_step = (self.glitch_start + self.glitch_pos) % self.length;
+            self.step_is_even = !self.step_is_even;
+            return;
+        }
         match self.direction {
             1 => { // reverse
                 if self.current_step == 0 { self.current_step = self.length - 1; }

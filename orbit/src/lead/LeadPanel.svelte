@@ -17,9 +17,11 @@
     import { get } from 'svelte/store';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
     import { seqTimeDivision } from './stores/state';
+    import { leadGlitchSize, setLeadGlitch } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
+    import GlitchSlider from '../shared/components/GlitchSlider.svelte';
     import NoteSequencer from '../shared/components/NoteSequencer.svelte';
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
@@ -175,7 +177,9 @@
         </button>
         <button class="pill-btn latch" class:active={latch} onclick={toggleLatch}>LATCH</button>
     </div>
-    <PlayControls />
+    <PlayControls>
+        <GlitchSlider glitchSize={leadGlitchSize} onGlitch={setLeadGlitch} colour="#B56ECC" />
+    </PlayControls>
     <Slider
         label={qsLabel}
         value={qsValue}

@@ -10,6 +10,7 @@
 </script>
 
 <div class="play-controls">
+    <slot />
     <div class="bpm-section">
         <button class="bpm-btn" onclick={() => adjustBpm(-1)}>−</button>
         <span class="bpm-value">{currentBpm}</span>
@@ -28,6 +29,8 @@
         align-items: center;
         gap: 12px;
         padding: 4px 24px 0;
+        width: 100%;
+        box-sizing: border-box;
     }
     .bpm-section { display: flex; align-items: center; gap: 8px; }
     .bpm-value {

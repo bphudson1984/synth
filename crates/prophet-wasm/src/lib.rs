@@ -183,3 +183,4 @@ pub extern "C" fn set_param(id: u32, value: f32) {
 #[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.swing = swing.clamp(0.0, 1.0); } } }
 #[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.set_time_div(div); } } }
 #[no_mangle] pub extern "C" fn seq_rotate(dir: i32) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.rotate(dir); } } }
+#[no_mangle] pub extern "C" fn seq_set_glitch(size: u8) { unsafe { if let Some(s) = SYNTH.as_mut() { s.sequencer.set_glitch(size as usize); } } }

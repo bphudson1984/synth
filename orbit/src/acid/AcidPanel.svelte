@@ -11,9 +11,11 @@
         loadPreset, randomizePattern, transposePattern,
         switchAcidSequence, addAcidSequence, duplicateAcidSequence, deleteAcidSequence, toggleAcidChain, toggleAcidRandom,
     } from './stores/state';
+    import { acidGlitchSize, setAcidGlitch } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
+    import GlitchSlider from '../shared/components/GlitchSlider.svelte';
     import AcidSequencer from './AcidSequencer.svelte';
     import AcidTransport from './AcidTransport.svelte';
     import SynthSettings from '../shared/components/SynthSettings.svelte';
@@ -104,7 +106,9 @@
         colour={ACID_COLOUR}
         onQuickSlotSelect={selectQuickSlot}
     />
-    <PlayControls />
+    <PlayControls>
+        <GlitchSlider glitchSize={acidGlitchSize} onGlitch={setAcidGlitch} colour="#5DBE6E" />
+    </PlayControls>
     <Slider label={qsLabel} value={qsValue} colour={ACID_COLOUR} onChange={setQuickSlotSliderValue} />
 </div>
 

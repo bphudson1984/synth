@@ -183,3 +183,8 @@ pub extern "C" fn set_all_engines(is_909: u8) {
         for t in &mut TRACK_ENGINE { *t = is_909 != 0; }
     }
 }
+
+#[no_mangle]
+pub extern "C" fn seq_set_glitch(size: u8) {
+    unsafe { if let Some(seq) = SEQ.as_mut() { seq.set_glitch(size as usize); } }
+}

@@ -29,6 +29,7 @@ export function setDrumEngine(e: OrbitEngine) {
     registerEngine({
         play: () => { lastDrumStep = -1; engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
         stop: () => { engine?.seqStop(); currentStep.set(0); lastDrumStep = -1; },
+        setGlitch: (size: number) => { setDrumGlitch(size); },
     });
     registerMixerCallback('drum', (gain) => { engine?.setMasterVolume(gain); }, (pan) => { engine?.setPan(pan); });
 }
@@ -67,6 +68,12 @@ export const patterns = writable(initPatterns());
 export { isPlaying, bpm, togglePlay } from '../../shared/stores/transport';
 export const currentStep = writable(0);
 export const triggeredVoices = writable(new Set<number>());
+export const drumGlitchSize = writable(0);
+
+export function setDrumGlitch(size: number) {
+    drumGlitchSize.set(size);
+    engine?.seqSetGlitch(size);
+}
 
 // Derived
 export const sliderValue = derived(

@@ -65,6 +65,7 @@ export function setLeadEngine(e: BraidsEngine) {
             // Belt-and-suspenders: release any note the engine might be holding
             for (let n = 0; n < 128; n++) engine?.noteOff(n);
         },
+        setGlitch: (size: number) => { setLeadGlitch(size); },
     });
     bpm.subscribe((value) => { engine?.seqSetBpm(value); });
     // React to global play/stop changes for arp sync
@@ -247,6 +248,12 @@ export const seqNumPages = writable(1);
 export const seqCurrentPage = writable(0);
 export const seqSelectedStep = writable(0); // global step index across all pages
 export const seqCurrentStep = writable(0);  // playback position (global)
+export const leadGlitchSize = writable(0);
+
+export function setLeadGlitch(size: number) {
+    leadGlitchSize.set(size);
+    engine?.seqSetGlitch(size);
+}
 
 export function addSeqPage() {
     const pages = get(seqNumPages);
@@ -714,6 +721,7 @@ export function duplicateLeadSequence() {
 export const leadSeq: NoteSequencerStore = {
     seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
     seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode,
+    glitchSize: leadGlitchSize, setGlitch: setLeadGlitch,
     connectEngine: () => {}, connectOnStep: () => {},
     addSeqPage, setSeqPage, selectSeqStep,
     setSeqStepFromNotes: (notes: number[], label: string) => {

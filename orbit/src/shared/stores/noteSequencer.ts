@@ -24,6 +24,7 @@ export interface SeqEngine {
     setTimeDivision(div: number): void;
     seqRotate(dir: number): void;
     setSeqLength(len: number): void;
+    seqSetGlitch(size: number): void;
 }
 
 const PAGE_SIZE = 16;
@@ -47,6 +48,7 @@ export function createNoteSequencerStore() {
     const seqSettingsOpen = writable(false);
     const stepSettingsOpen = writable(false);
     const lenMode = writable(false);
+    const glitchSize = writable(0);
 
     function connectEngine(e: SeqEngine) {
         engine = e;
@@ -57,6 +59,7 @@ export function createNoteSequencerStore() {
                 // Release all notes to prevent hanging
                 for (let n = 0; n < 128; n++) engine?.noteOff?.(n);
             },
+            setGlitch: (size: number) => { setGlitch(size); },
         });
         bpm.subscribe((value) => { engine?.seqSetBpm(value); });
     }
@@ -213,6 +216,11 @@ export function createNoteSequencerStore() {
         lenMode.set(false);
     }
 
+    function setGlitch(size: number) {
+        glitchSize.set(size);
+        engine?.seqSetGlitch(size);
+    }
+
     function closeAllDrawers() {
         seqSettingsOpen.set(false);
         stepSettingsOpen.set(false);
@@ -260,7 +268,7 @@ export function createNoteSequencerStore() {
     return {
         // Stores
         seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
-        seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode,
+        seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode, glitchSize,
         // Connection
         connectEngine, connectOnStep,
         // Actions
@@ -270,6 +278,7 @@ export function createNoteSequencerStore() {
         setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
         toggleLenMode, setLenFromStep,
         toggleSeqSettings, toggleStepSettings, closeAllDrawers,
+        setGlitch,
         captureSequence, restoreSequence,
     };
 }

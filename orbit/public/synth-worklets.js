@@ -56,6 +56,7 @@ function createSynthProcessor(name, extraHandler) {
                 case 'seq-stop': this.wasm.seq_stop(); break;
                 case 'seq-bpm': this.wasm.seq_set_bpm(data.value); break;
                 case 'seq-clear': this.wasm.seq_clear(); break;
+                case 'seq-set-glitch': this.wasm.seq_set_glitch(data.value); break;
                 default:
                     if (extraHandler) extraHandler(this.wasm, data);
                     break;

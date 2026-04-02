@@ -25,6 +25,7 @@ pub struct AcidSequencer {
     pub length: usize,
     state: PlayState,
     current_step: usize,
+    display_step: usize,
     sample_counter: f32,
     samples_per_step: f32,
     gate_active: bool,
@@ -39,18 +40,24 @@ pub struct AcidSequencer {
     step_is_even: bool,
     pingpong_forward: bool,
     rng_state: u32,
+    // Glitch mode
+    glitch_size: usize,
+    glitch_start: usize,
+    glitch_pos: usize,
+    glitch_origin: usize,
 }
 
 impl AcidSequencer {
     pub fn new(sample_rate: f32) -> Self {
         let mut seq = Self {
             steps: [Step::default(); NUM_STEPS], length: NUM_STEPS,
-            state: PlayState::Stopped, current_step: 0,
+            state: PlayState::Stopped, current_step: 0, display_step: 0,
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
             trigger_pending: false, bpm: 120.0, sample_rate,
             direction: 0, swing: 0.0, time_div: 2,
             step_is_even: true, pingpong_forward: true, rng_state: 12345,
+            glitch_size: 0, glitch_start: 0, glitch_pos: 0, glitch_origin: 0,
         };
         seq.update_timing();
         seq
@@ -64,12 +71,14 @@ impl AcidSequencer {
     pub fn play(&mut self) {
         self.state = PlayState::Playing;
         self.current_step = if self.direction == 1 { self.length.saturating_sub(1) } else { 0 };
+        self.display_step = self.current_step;
         self.sample_counter = 0.0;
         self.gate_active = false;
         self.gate_counter = 0.0;
         self.trigger_pending = true;
         self.step_is_even = true;
         self.pingpong_forward = true;
+        self.glitch_size = 0;
     }
 
     pub fn stop(&mut self) {
@@ -82,8 +91,29 @@ impl AcidSequencer {
         self.update_timing();
     }
 
-    pub fn current_step(&self) -> usize { self.current_step }
+    pub fn current_step(&self) -> usize { self.display_step }
     pub fn is_playing(&self) -> bool { self.state == PlayState::Playing }
+
+    pub fn set_glitch(&mut self, size: usize) {
+        if size > 0 && self.glitch_size == 0 {
+            self.glitch_origin = self.current_step;
+            self.glitch_size = size;
+            self.glitch_start = (self.current_step + self.length - size) % self.length;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        } else if size == 0 && self.glitch_size > 0 {
+            self.glitch_size = 0;
+            self.current_step = self.glitch_origin;
+            self.display_step = self.glitch_origin;
+        } else if size > 0 && size != self.glitch_size {
+            self.glitch_size = size;
+            self.glitch_start = (self.glitch_origin + self.length - size) % self.length;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        }
+    }
 
     fn update_timing(&mut self) {
         let beats_per_sec = self.bpm / 60.0;
@@ -126,6 +156,7 @@ impl AcidSequencer {
         }
 
         if should_trigger {
+            self.display_step = self.current_step;
             let step = &self.steps[self.current_step];
 
             if step.gate {
@@ -152,6 +183,11 @@ impl AcidSequencer {
 
     fn advance_step(&mut self) {
         self.step_is_even = !self.step_is_even;
+        if self.glitch_size > 0 {
+            self.glitch_pos = (self.glitch_pos + 1) % self.glitch_size;
+            self.current_step = (self.glitch_start + self.glitch_pos) % self.length;
+            return;
+        }
         match self.direction {
             1 => { // reverse
                 if self.current_step == 0 { self.current_step = self.length - 1; }
