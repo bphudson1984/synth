@@ -57,7 +57,7 @@ impl SynthEngine for TB303 {
             4 => self.voice.accent_level = value,
             5 => self.voice.set_waveform(value < 0.5),
             6 => self.master_volume = value,
-            7 => self.voice.distortion = value,
+            7 => self.voice.set_distortion(value),
             _ => {}
         }
     }

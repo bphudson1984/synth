@@ -80,6 +80,14 @@ impl LadderFilter {
     }
 }
 
+/// Fast tanh approximation using rational function.
+/// Smooth saturation character, accurate to ~1% for |x| < 4.
+#[inline(always)]
+fn fast_tanh(x: f32) -> f32 {
+    let x2 = x * x;
+    x * (27.0 + x2) / (27.0 + 9.0 * x2)
+}
+
 /// SSM2040-style soft saturation with slight asymmetry.
 /// Scaled so signals in [-1, 1] pass mostly unchanged, larger signals compress.
 fn ssm2040_saturate(x: f32, drive: f32) -> f32 {
@@ -87,7 +95,7 @@ fn ssm2040_saturate(x: f32, drive: f32) -> f32 {
     // drive=1.0: clean (same as before). drive=2.0+: more grit.
     let scale = 0.2 * drive;
     let inv = 1.0 / scale;
-    (x * scale).tanh() * inv
+    fast_tanh(x * scale) * inv
 }
 
 #[cfg(test)]
