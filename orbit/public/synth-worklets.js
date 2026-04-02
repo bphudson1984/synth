@@ -162,3 +162,84 @@ createSynthProcessor('tr808-processor', (wasm, data) => {
         case 'set-all-engines': wasm.set_all_engines(data.is909 ? 1 : 0); break;
     }
 });
+
+// --- FX Rack processor (4 stereo inputs → 1 stereo output) ---
+
+class FxProcessor extends AudioWorkletProcessor {
+    constructor() {
+        super();
+        this.wasm = null;
+        this.ready = false;
+        this.memoryBuf = null;
+        this.memoryView = null;
+        this.ptrs = null;
+        this.port.onmessage = (e) => this.handleMessage(e.data);
+    }
+
+    handleMessage(data) {
+        if (data.type === 'wasm-bytes') {
+            WebAssembly.instantiate(data.bytes, {}).then(result => {
+                this.wasm = result.instance.exports;
+                this.wasm.init(sampleRate);
+                this.memoryBuf = this.wasm.memory.buffer;
+                this.memoryView = new Float32Array(this.memoryBuf);
+                // Cache buffer pointers (stable after init)
+                this.ptrs = [
+                    [this.wasm.get_chorus_in_l_ptr() / 4, this.wasm.get_chorus_in_r_ptr() / 4],
+                    [this.wasm.get_delay_in_l_ptr() / 4,  this.wasm.get_delay_in_r_ptr() / 4],
+                    [this.wasm.get_reverb_in_l_ptr() / 4, this.wasm.get_reverb_in_r_ptr() / 4],
+                    [this.wasm.get_dist_in_l_ptr() / 4,   this.wasm.get_dist_in_r_ptr() / 4],
+                ];
+                this.outL = this.wasm.get_out_l_ptr() / 4;
+                this.outR = this.wasm.get_out_r_ptr() / 4;
+                this.ready = true;
+                this.port.postMessage({ type: 'ready' });
+            }).catch(err => {
+                this.port.postMessage({ type: 'error', message: err.message });
+            });
+        } else if (data.type === 'set-param' && this.ready) {
+            this.wasm.set_param(data.effectId, data.paramId, data.value);
+        }
+    }
+
+    process(inputs, outputs) {
+        if (!this.ready) return true;
+        const out = outputs[0];
+        if (!out || !out[0]) return true;
+        const n = out[0].length;
+
+        // Refresh memory view if WASM memory grew
+        if (this.memoryBuf !== this.wasm.memory.buffer) {
+            this.memoryBuf = this.wasm.memory.buffer;
+            this.memoryView = new Float32Array(this.memoryBuf);
+        }
+
+        // Copy 4 stereo inputs into WASM buffers
+        for (let i = 0; i < 4; i++) {
+            const inp = inputs[i];
+            const [ptrL, ptrR] = this.ptrs[i];
+            if (inp && inp.length > 0 && inp[0] && inp[0].length > 0) {
+                this.memoryView.set(inp[0].subarray(0, n), ptrL);
+                if (inp[1] && inp[1].length > 0) {
+                    this.memoryView.set(inp[1].subarray(0, n), ptrR);
+                } else {
+                    this.memoryView.set(inp[0].subarray(0, n), ptrR);
+                }
+            } else {
+                this.memoryView.fill(0, ptrL, ptrL + n);
+                this.memoryView.fill(0, ptrR, ptrR + n);
+            }
+        }
+
+        // Process all effects
+        this.wasm.process(n);
+
+        // Copy output
+        out[0].set(this.memoryView.subarray(this.outL, this.outL + n));
+        if (out[1]) out[1].set(this.memoryView.subarray(this.outR, this.outR + n));
+
+        return true;
+    }
+}
+
+registerProcessor('fx-processor', FxProcessor);

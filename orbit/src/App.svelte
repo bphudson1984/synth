@@ -7,17 +7,19 @@
     import { setAcidEngine } from './acid/stores/state';
     import { BraidsEngine } from './lead/audio/engine';
     import { setLeadEngine } from './lead/stores/state';
+    import { FxEngine } from './fx/audio/engine';
+    import { setFxEngine, registerEngineSends } from './fx/stores/state';
     import DrumPanel from './drum/DrumPanel.svelte';
     import PadPanel from './pad/PadPanel.svelte';
     import AcidPanel from './acid/AcidPanel.svelte';
     import LeadPanel from './lead/LeadPanel.svelte';
+    import FxPanel from './fx/FxPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
     import HelpPanel from './help/HelpPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
-    let showHelp = $state(window.location.pathname === '/help');
-    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'mix'>('drum');
+    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'fx' | 'mix'>('drum');
 
     function openHelp() {
         showHelp = true;
@@ -36,11 +38,22 @@
             const padEngine = new ProphetEngine();
             const acidEngine = new AcidEngine();
             const leadEngine = new BraidsEngine();
-            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init()]);
+            const fxEngine = new FxEngine();
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init(), fxEngine.init()]);
             setDrumEngine(drumEngine);
             setPadEngine(padEngine);
             setAcidEngine(acidEngine);
             setLeadEngine(leadEngine);
+            setFxEngine(fxEngine);
+            // Connect send routing from each engine to the FX rack
+            drumEngine.connectSends(fxEngine);
+            padEngine.connectSends(fxEngine);
+            acidEngine.connectSends(fxEngine);
+            leadEngine.connectSends(fxEngine);
+            registerEngineSends('drum', (i, l) => drumEngine.setSendLevel(i, l));
+            registerEngineSends('pad', (i, l) => padEngine.setSendLevel(i, l));
+            registerEngineSends('acid', (i, l) => acidEngine.setSendLevel(i, l));
+            registerEngineSends('lead', (i, l) => leadEngine.setSendLevel(i, l));
             started = true;
             loading = false;
         } catch (err) {
@@ -69,8 +82,8 @@
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
-            <button class="tab-btn tab-last" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
-            <button class="help-btn" onclick={openHelp}>?</button>
+            <button class="tab-btn" class:active={panel === 'fx'} onclick={() => panel = 'fx'}>FX</button>
+            <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
         </nav>
         {#if panel === 'drum'}
             <DrumPanel />
@@ -80,6 +93,8 @@
             <AcidPanel />
         {:else if panel === 'lead'}
             <LeadPanel />
+        {:else if panel === 'fx'}
+            <FxPanel />
         {:else}
             <MixPanel />
         {/if}

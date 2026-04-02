@@ -110,31 +110,6 @@ export const PAD_SETTINGS: SettingsSection[] = [
             { name: 'DRIFT',      id: PARAM.DRIFT,       min: 0, max: 0.1, default: 0, type: 'slider' },
         ],
     },
-    {
-        label: 'CHORUS',
-        params: [
-            { name: 'RATE',  id: PARAM.CHORUS_RATE,   min: 0, max: 5, default: 0.8, type: 'slider' },
-            { name: 'DEPTH', id: PARAM.CHORUS_DEPTH,  min: 0, max: 1, default: 0.5, type: 'slider' },
-            { name: 'MIX',   id: PARAM.CHORUS_MIX,    min: 0, max: 1, default: 0.3, type: 'slider' },
-        ],
-    },
-    {
-        label: 'DELAY',
-        params: [
-            { name: 'TIME',     id: PARAM.DELAY_TIME,      min: 0, max: 1000, default: 0, type: 'slider' },
-            { name: 'FEEDBACK', id: PARAM.DELAY_FEEDBACK,   min: 0, max: 1, default: 0, type: 'slider' },
-            { name: 'TONE',     id: PARAM.DELAY_TONE,       min: 0, max: 1, default: 0.5, type: 'slider' },
-            { name: 'MIX',      id: PARAM.DELAY_MIX,        min: 0, max: 1, default: 0, type: 'slider' },
-        ],
-    },
-    {
-        label: 'REVERB',
-        params: [
-            { name: 'DECAY',   id: PARAM.REVERB_DECAY,    min: 0, max: 1, default: 0.7, type: 'slider' },
-            { name: 'DAMPING', id: PARAM.REVERB_DAMPING,  min: 0, max: 1, default: 0.6, type: 'slider' },
-            { name: 'MIX',     id: PARAM.REVERB_MIX,      min: 0, max: 1, default: 0.25, type: 'slider' },
-        ],
-    },
 ];
 export type PadParamName = typeof PAD_PARAMS[number];
 

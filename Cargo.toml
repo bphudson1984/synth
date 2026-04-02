@@ -2,6 +2,8 @@
 members = [
     "crates/audio-test-harness",
     "crates/dsp-common",
+    "crates/fx-dsp",
+    "crates/fx-wasm",
     "crates/prophet-dsp",
     "crates/prophet-plugin",
     "crates/prophet-wasm",

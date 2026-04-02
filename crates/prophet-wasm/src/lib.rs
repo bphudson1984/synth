@@ -2,16 +2,10 @@
 //! Exposes functions callable from JavaScript AudioWorkletProcessor.
 
 use prophet_dsp::synth::ProphetSynth;
-use prophet_dsp::effects::chorus::StereoChorus;
-use prophet_dsp::effects::delay::TapeDelay;
-use prophet_dsp::effects::reverb::PlateReverb;
 use prophet_dsp::arpeggiator::{Arpeggiator, ArpMode, ArpDivision};
 use dsp_common::note_sequencer::MAX_STEPS;
 
 static mut SYNTH: Option<ProphetSynth> = None;
-static mut CHORUS: Option<StereoChorus> = None;
-static mut DELAY: Option<TapeDelay> = None;
-static mut REVERB: Option<PlateReverb> = None;
 static mut ARP: Option<Arpeggiator> = None;
 static mut ARP_LAST_NOTE: u8 = 0;
 static mut LEFT_BUF: [f32; 512] = [0.0; 512];
@@ -38,9 +32,6 @@ pub extern "C" fn init(sample_rate: f32) {
         });
         synth.master_volume = 0.5;
         SYNTH = Some(synth);
-        CHORUS = Some(StereoChorus::new(sample_rate));
-        DELAY = Some(TapeDelay::new(sample_rate));
-        REVERB = Some(PlateReverb::new(sample_rate));
         ARP = Some(Arpeggiator::new(sample_rate));
     }
 }
@@ -49,9 +40,6 @@ pub extern "C" fn init(sample_rate: f32) {
 pub extern "C" fn process(num_samples: u32) {
     unsafe {
         let synth = SYNTH.as_mut().unwrap();
-        let chorus = CHORUS.as_mut().unwrap();
-        let delay = DELAY.as_mut().unwrap();
-        let reverb = REVERB.as_mut().unwrap();
         let arp = ARP.as_mut().unwrap();
 
         let n = (num_samples as usize).min(512);
@@ -68,12 +56,10 @@ pub extern "C" fn process(num_samples: u32) {
             }
 
             // Synth process (includes embedded sequencer)
+            // Effects moved to shared FX rack — output dry mono
             let dry = synth.process();
-            let (ch_l, ch_r) = chorus.process(dry);
-            let (dl_l, dl_r) = delay.process(ch_l, ch_r);
-            let (rv_l, rv_r) = reverb.process_stereo(dl_l, dl_r);
-            LEFT_BUF[i] = rv_l;
-            RIGHT_BUF[i] = rv_r;
+            LEFT_BUF[i] = dry;
+            RIGHT_BUF[i] = dry;
         }
     }
 }
@@ -115,19 +101,8 @@ pub extern "C" fn set_param(id: u32, value: f32) {
                 use dsp_common::engine::SynthEngine;
                 if let Some(synth) = SYNTH.as_mut() { synth.set_param(id, value); }
             }
-            // Effects — Chorus
-            50 => { CHORUS.as_mut().unwrap().rate = value; }
-            51 => { CHORUS.as_mut().unwrap().depth = value; }
-            52 => { CHORUS.as_mut().unwrap().mix = value; }
-            // Effects — Delay
-            53 => { DELAY.as_mut().unwrap().time_ms = value; }
-            54 => { DELAY.as_mut().unwrap().feedback = value; }
-            55 => { DELAY.as_mut().unwrap().tone = value; }
-            56 => { DELAY.as_mut().unwrap().mix = value; }
-            // Effects — Reverb
-            57 => { REVERB.as_mut().unwrap().decay = value; }
-            58 => { REVERB.as_mut().unwrap().damping = value; }
-            59 => { REVERB.as_mut().unwrap().mix = value; }
+            // Effects moved to shared FX rack (IDs 50-59 are no-ops)
+            50..=59 => {}
             // Arpeggiator (60-67)
             60 => { ARP.as_mut().unwrap().mode = ArpMode::from_u8(value as u8); }
             61 => { ARP.as_mut().unwrap().division = ArpDivision::from_u8(value as u8); }

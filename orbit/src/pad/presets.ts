@@ -27,10 +27,6 @@ function p(overrides: [number, number][]): [number, number][] {
         [PARAM.WM_PW_A, 0], [PARAM.WM_PW_B, 0], [PARAM.WM_FILTER, 0],
         [PARAM.MASTER_VOL, 0.5], [PARAM.GLIDE_RATE, 0.1], [PARAM.GLIDE_ON, 0],
         [PARAM.UNISON, 0], [PARAM.DRIFT, 1],
-        [PARAM.CHORUS_RATE, 0.8], [PARAM.CHORUS_DEPTH, 0.5], [PARAM.CHORUS_MIX, 0],
-        [PARAM.DELAY_TIME, 375], [PARAM.DELAY_FEEDBACK, 0.4],
-        [PARAM.DELAY_TONE, 0.6], [PARAM.DELAY_MIX, 0],
-        [PARAM.REVERB_DECAY, 0.7], [PARAM.REVERB_DAMPING, 0.7], [PARAM.REVERB_MIX, 0],
     ];
     const map = new Map(defaults);
     for (const [id, val] of overrides) map.set(id, val);
@@ -47,7 +43,6 @@ export const PRESETS: Preset[] = [
         [P.FILTER_CUTOFF, 3000], [P.FILTER_RESONANCE, 0.8], [P.FILTER_ENV_AMT, 2000],
         [P.FILTER_ATTACK, 0.15], [P.FILTER_DECAY, 0.5], [P.FILTER_SUSTAIN, 0.3], [P.FILTER_RELEASE, 0.8],
         [P.AMP_ATTACK, 0.15], [P.AMP_DECAY, 0.5], [P.AMP_SUSTAIN, 0.7], [P.AMP_RELEASE, 0.8],
-        [P.CHORUS_MIX, 0.3], [P.REVERB_DECAY, 0.7], [P.REVERB_DAMPING, 0.6], [P.REVERB_MIX, 0.25],
     ])},
     { name: 'In The Air', category: 'Pads', params: p([
         [P.OSC_A_SAW, 0], [P.OSC_A_PULSE, 1], [P.OSC_A_PW, 0.35],
@@ -57,7 +52,7 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 0.5], [P.FILTER_DECAY, 1.5], [P.FILTER_SUSTAIN, 0.7], [P.FILTER_RELEASE, 1.5],
         [P.AMP_ATTACK, 0.6], [P.AMP_SUSTAIN, 1.0], [P.AMP_RELEASE, 1.8],
         [P.LFO_FREQ, 1.2], [P.LFO_AMOUNT, 0.6], [P.WM_PW_A, 1],
-        [P.DRIFT, 2], [P.CHORUS_MIX, 0.4], [P.REVERB_DECAY, 0.8], [P.REVERB_MIX, 0.3],
+        [P.DRIFT, 2],
     ])},
     { name: 'Blade Runner', category: 'Pads', params: p([
         [P.OSC_A_SAW, 1], [P.OSC_B_SAW, 1], [P.OSC_B_FINE, 5],
@@ -66,7 +61,7 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 1.0], [P.FILTER_DECAY, 3.0], [P.FILTER_SUSTAIN, 0.5], [P.FILTER_RELEASE, 2.5],
         [P.AMP_ATTACK, 0.8], [P.AMP_SUSTAIN, 1.0], [P.AMP_RELEASE, 3.0],
         [P.LFO_FREQ, 0.2], [P.LFO_AMOUNT, 0.3], [P.WM_FILTER, 1],
-        [P.DRIFT, 3], [P.REVERB_DECAY, 0.9], [P.REVERB_DAMPING, 0.5], [P.REVERB_MIX, 0.4],
+        [P.DRIFT, 3],
     ])},
     { name: 'Human Nature', category: 'Pads', params: p([
         [P.OSC_A_SAW, 0], [P.OSC_A_PULSE, 1], [P.OSC_A_PW, 0.35],
@@ -76,7 +71,7 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 0.8], [P.FILTER_DECAY, 2.0], [P.FILTER_SUSTAIN, 0.6], [P.FILTER_RELEASE, 2.0],
         [P.AMP_ATTACK, 0.7], [P.AMP_SUSTAIN, 1.0], [P.AMP_RELEASE, 2.5],
         [P.LFO_FREQ, 0.8], [P.LFO_AMOUNT, 0.5], [P.WM_PW_A, 1], [P.WM_PW_B, 1],
-        [P.DRIFT, 2.5], [P.CHORUS_MIX, 0.3], [P.REVERB_DECAY, 0.85], [P.REVERB_MIX, 0.35],
+        [P.DRIFT, 2.5],
     ])},
 
     // STRINGS
@@ -88,7 +83,7 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 0.4], [P.FILTER_DECAY, 0.8], [P.FILTER_SUSTAIN, 0.7],
         [P.AMP_ATTACK, 0.4], [P.AMP_SUSTAIN, 0.9], [P.AMP_RELEASE, 0.7],
         [P.LFO_FREQ, 1.5], [P.LFO_AMOUNT, 0.5], [P.WM_PW_A, 1],
-        [P.DRIFT, 2], [P.CHORUS_MIX, 0.35], [P.REVERB_MIX, 0.25],
+        [P.DRIFT, 2],
     ])},
 
     // BRASS
@@ -134,8 +129,7 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 0.001], [P.FILTER_DECAY, 0.5], [P.FILTER_SUSTAIN, 0.3], [P.FILTER_RELEASE, 0.2],
         [P.AMP_ATTACK, 0.001], [P.AMP_SUSTAIN, 0.85], [P.AMP_RELEASE, 0.2],
         [P.SYNC, 1], [P.PM_FILT_ENV, 0.6], [P.PM_FREQ_A, 1],
-        [P.DRIFT, 1], [P.DELAY_TIME, 350], [P.DELAY_FEEDBACK, 0.3], [P.DELAY_MIX, 0.2],
-        [P.REVERB_MIX, 0.15],
+        [P.DRIFT, 1],
     ])},
     { name: 'Unison Lead', category: 'Leads', params: p([
         [P.OSC_A_SAW, 1], [P.OSC_B_SAW, 1], [P.OSC_B_FINE, 5],
@@ -156,7 +150,7 @@ export const PRESETS: Preset[] = [
         [P.AMP_ATTACK, 1.5], [P.AMP_SUSTAIN, 0.8], [P.AMP_RELEASE, 2.5],
         [P.PM_OSC_B, 0.2], [P.PM_FREQ_A, 1], [P.PM_FILTER, 1],
         [P.LFO_FREQ, 0.15], [P.LFO_AMOUNT, 0.4], [P.WM_FILTER, 1],
-        [P.DRIFT, 4], [P.REVERB_DECAY, 0.85], [P.REVERB_MIX, 0.35],
+        [P.DRIFT, 4],
     ])},
     { name: 'Stranger Things', category: 'Film/TV', params: p([
         [P.OSC_A_SAW, 0], [P.OSC_A_PULSE, 1], [P.OSC_A_PW, 0.4],
@@ -167,7 +161,7 @@ export const PRESETS: Preset[] = [
         [P.AMP_ATTACK, 0.8], [P.AMP_SUSTAIN, 0.8], [P.AMP_RELEASE, 2.0],
         [P.PM_OSC_B, 0.25], [P.PM_FREQ_A, 1], [P.PM_FILTER, 1],
         [P.LFO_FREQ, 0.1], [P.LFO_AMOUNT, 0.3], [P.WM_FILTER, 1],
-        [P.DRIFT, 4], [P.REVERB_DECAY, 0.9], [P.REVERB_MIX, 0.4],
+        [P.DRIFT, 4],
     ])},
 
     // SFX
@@ -179,6 +173,5 @@ export const PRESETS: Preset[] = [
         [P.FILTER_ATTACK, 0.001], [P.FILTER_DECAY, 1.5], [P.FILTER_SUSTAIN, 0], [P.FILTER_RELEASE, 1.5],
         [P.AMP_ATTACK, 0.001], [P.AMP_DECAY, 3.0], [P.AMP_SUSTAIN, 0], [P.AMP_RELEASE, 2.0],
         [P.PM_FILT_ENV, 0.6], [P.PM_OSC_B, 0.3], [P.PM_FREQ_A, 1],
-        [P.REVERB_DECAY, 0.85], [P.REVERB_MIX, 0.35],
     ])},
 ];
