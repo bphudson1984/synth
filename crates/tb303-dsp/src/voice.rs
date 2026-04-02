@@ -1,6 +1,6 @@
 use dsp_common::note_to_hz;
 use crate::oscillator::Oscillator;
-use crate::filter::DiodeLadder;
+use crate::filter::{DiodeLadder, fast_tanh};
 use crate::envelope::{FilterEnvelope, AmpEnvelope};
 use crate::glide::Glide;
 
@@ -19,7 +19,9 @@ pub struct AcidVoice {
     pub env_mod: f32,
     pub decay: f32,
     pub accent_level: f32,
-    pub distortion: f32,
+    distortion: f32,
+    dist_drive: f32,       // cached: 1.0 + distortion * 15.0
+    dist_sqrt_inv: f32,    // cached: 1.0 / sqrt(drive)
     pub volume: f32,
 
     current_accent: bool,
@@ -36,12 +38,20 @@ impl AcidVoice {
             glide: Glide::new(sample_rate),
             sample_rate,
             cutoff: 800.0, resonance: 0.4, env_mod: 0.6,
-            decay: 0.3, accent_level: 0.5, distortion: 0.0, volume: 0.8,
+            decay: 0.3, accent_level: 0.5,
+            distortion: 0.0, dist_drive: 1.0, dist_sqrt_inv: 1.0,
+            volume: 0.8,
             current_accent: false, first_note: true,
         }
     }
 
     pub fn set_waveform(&mut self, saw: bool) { self.osc.set_waveform(saw); }
+
+    pub fn set_distortion(&mut self, d: f32) {
+        self.distortion = d;
+        self.dist_drive = 1.0 + d * 15.0;
+        self.dist_sqrt_inv = 1.0 / self.dist_drive.sqrt();
+    }
 
     pub fn note_on(&mut self, note: u8, accent: bool, slide: bool) {
         let target_hz = note_to_hz(note);
@@ -80,10 +90,9 @@ impl AcidVoice {
         self.filter.set_resonance(effective_reso);
         let filtered = self.filter.process(osc_out);
 
-        // Distortion: tanh waveshaper after filter
+        // Distortion: tanh waveshaper after filter (drive/sqrt cached)
         let distorted = if self.distortion > 0.001 {
-            let drive = 1.0 + self.distortion * 15.0;
-            let wet = (filtered * drive).tanh() / drive.sqrt();
+            let wet = fast_tanh(filtered * self.dist_drive) * self.dist_sqrt_inv;
             filtered * (1.0 - self.distortion) + wet * self.distortion * 2.0
         } else {
             filtered

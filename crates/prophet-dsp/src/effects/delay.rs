@@ -1,6 +1,13 @@
 use super::{DelayLine, OnePole};
 use std::f32::consts::PI;
 
+/// Fast tanh approximation using rational function.
+#[inline(always)]
+fn fast_tanh(x: f32) -> f32 {
+    let x2 = x * x;
+    x * (27.0 + x2) / (27.0 + 9.0 * x2)
+}
+
 /// Fast sine approximation for phase in [0, 1).
 /// Uses parabolic approximation — accurate to ~1% which is fine for LFO modulation.
 fn fast_sin(phase: f32) -> f32 {
@@ -100,8 +107,8 @@ impl TapeDelay {
         let filtered_r = self.tone_filter_r.process(wet_r);
 
         // Soft saturation on feedback (tape compression)
-        self.feedback_l = (filtered_l * 0.5).tanh() * 2.0;
-        self.feedback_r = (filtered_r * 0.5).tanh() * 2.0;
+        self.feedback_l = fast_tanh(filtered_l * 0.5) * 2.0;
+        self.feedback_r = fast_tanh(filtered_r * 0.5) * 2.0;
 
         // Mix
         let out_l = input_l * (1.0 - self.mix) + wet_l * self.mix;
