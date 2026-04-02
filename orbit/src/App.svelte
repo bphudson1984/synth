@@ -12,10 +12,22 @@
     import AcidPanel from './acid/AcidPanel.svelte';
     import LeadPanel from './lead/LeadPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
+    import HelpPanel from './help/HelpPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
+    let showHelp = $state(window.location.pathname === '/help');
     let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'mix'>('drum');
+
+    function openHelp() {
+        showHelp = true;
+        window.history.pushState({}, '', '/help');
+    }
+
+    function closeHelp() {
+        showHelp = false;
+        window.history.pushState({}, '', '/');
+    }
 
     async function start() {
         loading = true;
@@ -39,7 +51,9 @@
     }
 </script>
 
-{#if !started}
+{#if showHelp}
+    <HelpPanel onBack={closeHelp} />
+{:else if !started}
     <div class="splash">
         <div class="brand">Hudsonic</div>
         <div class="logo">ORBIT</div>
@@ -55,6 +69,7 @@
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
             <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
+            <button class="tab-btn help-btn" onclick={openHelp}>?</button>
         </nav>
         {#if panel === 'drum'}
             <DrumPanel />
