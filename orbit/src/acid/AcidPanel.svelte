@@ -7,7 +7,9 @@
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
         setQuickSlotSliderValue,
+        acidSequenceBank, currentAcidSequenceIndex, acidChainMode, acidRandomMode,
         loadPreset, randomizePattern, transposePattern,
+        switchAcidSequence, addAcidSequence, duplicateAcidSequence, deleteAcidSequence, toggleAcidChain, toggleAcidRandom,
     } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
@@ -15,9 +17,14 @@
     import AcidSequencer from './AcidSequencer.svelte';
     import AcidTransport from './AcidTransport.svelte';
     import SynthSettings from '../shared/components/SynthSettings.svelte';
+    import SequenceBankSelector from '../shared/components/SequenceBankSelector.svelte';
 
     $: presetIdx = $currentPresetIndex;
     $: transpose = $currentTranspose;
+    $: seqBank = $acidSequenceBank;
+    $: seqIdx = $currentAcidSequenceIndex;
+    $: chain = $acidChainMode;
+    $: random = $acidRandomMode;
     $: showSettings = $settingsOpen;
     $: settingsVals = $settingsValues;
     $: slots = $quickSlots;
@@ -67,6 +74,20 @@
         />
     {:else}
         <AcidSequencer />
+        <SequenceBankSelector
+            currentIndex={seqIdx}
+            count={seqBank.length}
+            maxCount={8}
+            colour={ACID_COLOUR}
+            onSelect={switchAcidSequence}
+            onAdd={addAcidSequence}
+            onDuplicate={duplicateAcidSequence}
+            onDelete={deleteAcidSequence}
+            chainActive={chain}
+            randomActive={random}
+            onToggleChain={toggleAcidChain}
+            onToggleRandom={toggleAcidRandom}
+        />
         <AcidTransport />
     {/if}
     <PadCircle

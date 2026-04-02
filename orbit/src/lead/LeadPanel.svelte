@@ -7,9 +7,11 @@
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
         setQuickSlotSliderValue,
+        leadSequenceBank, currentLeadSequenceIndex, leadChainMode, leadRandomMode,
         selectModel, triggerPad,
         togglePadMode, toggleLatch, setSeqStepFromPad,
         loadLeadPreset, toggleArpSettings, toggleSeqSettings, toggleStepSettings,
+        switchLeadSequence, addLeadSequence, duplicateLeadSequence, deleteLeadSequence, toggleLeadChain, toggleLeadRandom,
     } from './stores/state';
     import { LEAD_PRESETS } from './presets';
     import { get } from 'svelte/store';
@@ -23,6 +25,7 @@
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
     import ArpSettings from './ArpSettings.svelte';
     import SynthSettings from '../shared/components/SynthSettings.svelte';
+    import SequenceBankSelector from '../shared/components/SequenceBankSelector.svelte';
 
     $: model = $selectedModel;
     $: triggered = $triggeredNotes;
@@ -42,6 +45,10 @@
         ? ((settingsVals[activeSlotParam.id] ?? activeSlotParam.default) - activeSlotParam.min) / (activeSlotParam.max - activeSlotParam.min) * 100
         : 0;
     $: anyDrawerOpen = arpOpen || seqOpen || stepOpen;
+    $: seqBank = $leadSequenceBank;
+    $: seqIdx = $currentLeadSequenceIndex;
+    $: chain = $leadChainMode;
+    $: random = $leadRandomMode;
 
     function handlePresetChange(e: Event) {
         loadLeadPreset(Number((e.target as HTMLSelectElement).value));
@@ -133,6 +140,20 @@
             <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
         {/if}
         <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
+        <SequenceBankSelector
+            currentIndex={seqIdx}
+            count={seqBank.length}
+            maxCount={8}
+            colour={LEAD_COLOUR}
+            onSelect={switchLeadSequence}
+            onAdd={addLeadSequence}
+            onDuplicate={duplicateLeadSequence}
+            onDelete={deleteLeadSequence}
+            chainActive={chain}
+            randomActive={random}
+            onToggleChain={toggleLeadChain}
+            onToggleRandom={toggleLeadRandom}
+        />
     {/if}
     <PadCircle
         voices={pads}

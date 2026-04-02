@@ -3,8 +3,10 @@
     import {
         selectedVoice, selectedParam, triggeredVoices, perPadEngine,
         sliderValue, currentDrumPreset,
+        drumSequenceBank, currentDrumSequenceIndex, drumChainMode, drumRandomMode,
         selectVoice, selectParam, triggerPad, togglePadEngine, setSliderValue,
         loadDrumPreset, randomizeDrumPattern,
+        switchDrumSequence, addDrumSequence, duplicateDrumSequence, deleteDrumSequence, toggleDrumChain, toggleDrumRandom,
     } from './stores/state';
     import { PRESETS } from './presets';
     import PadCircle from '../shared/components/PadCircle.svelte';
@@ -12,6 +14,7 @@
     import PlayControls from '../shared/components/PlayControls.svelte';
     import StepSequencer from './StepSequencer.svelte';
     import Transport from './Transport.svelte';
+    import SequenceBankSelector from '../shared/components/SequenceBankSelector.svelte';
 
     $: selVoice = $selectedVoice;
     $: selParam = $selectedParam;
@@ -20,6 +23,10 @@
     $: sliderVal = $sliderValue;
     $: colour = VOICES[selVoice].colour;
     $: presetIdx = $currentDrumPreset;
+    $: seqBank = $drumSequenceBank;
+    $: seqIdx = $currentDrumSequenceIndex;
+    $: chain = $drumChainMode;
+    $: random = $drumRandomMode;
 
     function handlePresetChange(e: Event) {
         loadDrumPreset(Number((e.target as HTMLSelectElement).value));
@@ -48,6 +55,20 @@
     <button class="rnd-btn" onclick={randomizeDrumPattern}>RND</button>
 </div>
 <StepSequencer />
+<SequenceBankSelector
+    currentIndex={seqIdx}
+    count={seqBank.length}
+    maxCount={8}
+    {colour}
+    onSelect={switchDrumSequence}
+    onAdd={addDrumSequence}
+    onDuplicate={duplicateDrumSequence}
+    onDelete={deleteDrumSequence}
+    chainActive={chain}
+    randomActive={random}
+    onToggleChain={toggleDrumChain}
+    onToggleRandom={toggleDrumRandom}
+/>
 <Transport />
 <PadCircle
     voices={VOICES.map(v => ({ id: v.id, label: v.label, colour: v.colour }))}
