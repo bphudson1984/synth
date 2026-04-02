@@ -27,12 +27,6 @@ export class ProphetEngine extends BaseEngine {
         this.setParam(PARAM.AMP_DECAY, 0.5);
         this.setParam(PARAM.AMP_SUSTAIN, 0.7);
         this.setParam(PARAM.AMP_RELEASE, 0.8);
-        this.setParam(PARAM.CHORUS_RATE, 0.8);
-        this.setParam(PARAM.CHORUS_DEPTH, 0.5);
-        this.setParam(PARAM.CHORUS_MIX, 0.3);
-        this.setParam(PARAM.REVERB_DECAY, 0.7);
-        this.setParam(PARAM.REVERB_DAMPING, 0.6);
-        this.setParam(PARAM.REVERB_MIX, 0.25);
         this.setParam(PARAM.MASTER_VOL, 0.5);
     }
 
@@ -70,8 +64,5 @@ export const PARAM = {
     WM_MIX: 35, WM_FREQ_A: 36, WM_FREQ_B: 37, WM_PW_A: 38, WM_PW_B: 39, WM_FILTER: 40,
     MASTER_VOL: 41, GLIDE_RATE: 42, GLIDE_ON: 43, UNISON: 44, DRIFT: 45,
     MOD_WHEEL: 46, PITCH_BEND: 47,
-    CHORUS_RATE: 50, CHORUS_DEPTH: 51, CHORUS_MIX: 52,
-    DELAY_TIME: 53, DELAY_FEEDBACK: 54, DELAY_TONE: 55, DELAY_MIX: 56,
-    REVERB_DECAY: 57, REVERB_DAMPING: 58, REVERB_MIX: 59,
     ARP_MODE: 60, ARP_DIVISION: 61, ARP_BPM: 62, ARP_OCTAVES: 63, ARP_GATE: 64, ARP_SWING: 65, ARP_HOLD: 66, ARP_PANIC: 67,
 } as const;

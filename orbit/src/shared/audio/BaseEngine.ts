@@ -1,4 +1,5 @@
 import { getAudioContext } from './context';
+import type { FxEngine } from '../../fx/audio/engine';
 
 /**
  * Base class for all WASM audio engines.
@@ -8,6 +9,7 @@ import { getAudioContext } from './context';
 export abstract class BaseEngine {
     protected node: AudioWorkletNode | null = null;
     protected panner: StereoPannerNode | null = null;
+    protected sendGains: GainNode[] = [];
     protected _ready = false;
     get ready() { return this._ready; }
     onStep: ((step: number) => void) | null = null;
@@ -37,6 +39,27 @@ export abstract class BaseEngine {
 
     setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
+
+    /** Create 4 send gain nodes from this engine to the FX rack buses. */
+    connectSends(fxEngine: FxEngine): void {
+        if (!this.panner) return;
+        const ctx = this.panner.context as AudioContext;
+        const buses = [fxEngine.chorusBus, fxEngine.delayBus, fxEngine.reverbBus, fxEngine.distBus];
+        for (const bus of buses) {
+            const send = ctx.createGain();
+            send.gain.value = 0; // sends start muted
+            this.panner.connect(send);
+            send.connect(bus!);
+            this.sendGains.push(send);
+        }
+    }
+
+    /** Set the send level for one effect (0=chorus, 1=delay, 2=reverb, 3=distortion). */
+    setSendLevel(effectIndex: number, level: number): void {
+        if (this.sendGains[effectIndex]) {
+            this.sendGains[effectIndex].gain.value = level;
+        }
+    }
 
     // Common sequencer methods
     seqPlay() { this.node?.port.postMessage({ type: 'seq-play' }); }
