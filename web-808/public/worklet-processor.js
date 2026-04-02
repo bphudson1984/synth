@@ -4,6 +4,8 @@ class TR808Processor extends AudioWorkletProcessor {
         this.wasm = null;
         this.ready = false;
         this.lastStep = -1;
+        this.memoryBuf = null;
+        this.memoryView = null;
         this.port.onmessage = (e) => this.handleMessage(e.data);
     }
 
@@ -13,6 +15,8 @@ class TR808Processor extends AudioWorkletProcessor {
             WebAssembly.instantiate(data.bytes, {}).then(result => {
                 this.wasm = result.instance.exports;
                 this.wasm.init(sampleRate);
+                this.memoryBuf = this.wasm.memory.buffer;
+                this.memoryView = new Float32Array(this.memoryBuf);
                 this.ready = true;
                 this.port.postMessage({ type: 'ready' });
             }).catch(err => {
@@ -48,9 +52,13 @@ class TR808Processor extends AudioWorkletProcessor {
     process(inputs, outputs) {
         if (!this.ready) return true;
         const output = outputs[0];
-        const n = output[0].length;
+        const n = Math.min(output[0].length, 256);
         this.wasm.process(n);
-        const memory = new Float32Array(this.wasm.memory.buffer);
+        if (this.memoryBuf !== this.wasm.memory.buffer) {
+            this.memoryBuf = this.wasm.memory.buffer;
+            this.memoryView = new Float32Array(this.memoryBuf);
+        }
+        const memory = this.memoryView;
         const lp = this.wasm.get_left_ptr() / 4;
         const rp = this.wasm.get_right_ptr() / 4;
         output[0].set(memory.subarray(lp, lp + n));

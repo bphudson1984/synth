@@ -3,6 +3,8 @@
 *.swo
 *~
 .DS_Store
+*:Zone.Identifier
+*:mshield
 test-artifacts/*.wav
 screenshot.png
 
