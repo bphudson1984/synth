@@ -6,6 +6,11 @@ class TR808Processor extends AudioWorkletProcessor {
         this.lastStep = -1;
         this.memoryBuf = null;
         this.memoryView = null;
+        this.doubleBuffer = false;
+        this.bufL = null;
+        this.bufR = null;
+        this.bufReady = 0;
+        this.bufRead = 0;
         this.port.onmessage = (e) => this.handleMessage(e.data);
     }
 
@@ -17,6 +22,11 @@ class TR808Processor extends AudioWorkletProcessor {
                 this.wasm.init(sampleRate);
                 this.memoryBuf = this.wasm.memory.buffer;
                 this.memoryView = new Float32Array(this.memoryBuf);
+                this.doubleBuffer = !!data.useDoubleBuffer;
+                if (this.doubleBuffer) {
+                    this.bufL = new Float32Array(512);
+                    this.bufR = new Float32Array(512);
+                }
                 this.ready = true;
                 this.port.postMessage({ type: 'ready' });
             }).catch(err => {
@@ -52,17 +62,39 @@ class TR808Processor extends AudioWorkletProcessor {
     process(inputs, outputs) {
         if (!this.ready) return true;
         const output = outputs[0];
-        const n = Math.min(output[0].length, 256);
-        this.wasm.process(n);
-        if (this.memoryBuf !== this.wasm.memory.buffer) {
-            this.memoryBuf = this.wasm.memory.buffer;
-            this.memoryView = new Float32Array(this.memoryBuf);
+        const needed = output[0].length;
+
+        if (this.doubleBuffer) {
+            if (this.bufReady < needed) {
+                this.wasm.process(512);
+                if (this.memoryBuf !== this.wasm.memory.buffer) {
+                    this.memoryBuf = this.wasm.memory.buffer;
+                    this.memoryView = new Float32Array(this.memoryBuf);
+                }
+                const lp = this.wasm.get_left_ptr() / 4;
+                const rp = this.wasm.get_right_ptr() / 4;
+                this.bufL.set(this.memoryView.subarray(lp, lp + 512));
+                this.bufR.set(this.memoryView.subarray(rp, rp + 512));
+                this.bufRead = 0;
+                this.bufReady = 512;
+            }
+            const r = this.bufRead;
+            output[0].set(this.bufL.subarray(r, r + needed));
+            if (output[1]) output[1].set(this.bufR.subarray(r, r + needed));
+            this.bufRead += needed;
+            this.bufReady -= needed;
+        } else {
+            const n = Math.min(needed, 256);
+            this.wasm.process(n);
+            if (this.memoryBuf !== this.wasm.memory.buffer) {
+                this.memoryBuf = this.wasm.memory.buffer;
+                this.memoryView = new Float32Array(this.memoryBuf);
+            }
+            const lp = this.wasm.get_left_ptr() / 4;
+            const rp = this.wasm.get_right_ptr() / 4;
+            output[0].set(this.memoryView.subarray(lp, lp + n));
+            if (output[1]) output[1].set(this.memoryView.subarray(rp, rp + n));
         }
-        const memory = this.memoryView;
-        const lp = this.wasm.get_left_ptr() / 4;
-        const rp = this.wasm.get_right_ptr() / 4;
-        output[0].set(memory.subarray(lp, lp + n));
-        if (output[1]) output[1].set(memory.subarray(rp, rp + n));
 
         const step = this.wasm.seq_get_current_step();
         if (step !== this.lastStep) {

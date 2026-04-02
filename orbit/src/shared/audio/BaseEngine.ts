@@ -27,7 +27,8 @@ export abstract class BaseEngine {
                 if (e.data.type === 'error') { clearTimeout(timeout); reject(new Error(e.data.message)); }
                 if (e.data.type === 'step') { this.onStep?.(e.data.step); }
             };
-            this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes }, [wasmBytes]);
+            const isFirefox = /Firefox/.test(navigator.userAgent);
+            this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes, useDoubleBuffer: isFirefox }, [wasmBytes]);
         });
         this.panner = ctx.createStereoPanner();
         this.node.connect(this.panner);

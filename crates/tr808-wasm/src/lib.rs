@@ -8,8 +8,8 @@ static mut SEQ: Option<Sequencer> = None;
 static mut SEQ_EVENTS: Vec<SeqEvent> = Vec::new();
 // Per-track engine assignment: false=808, true=909
 static mut TRACK_ENGINE: [bool; 13] = [false; 13];
-static mut LEFT_BUF: [f32; 256] = [0.0; 256];
-static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
+static mut LEFT_BUF: [f32; 512] = [0.0; 512];
+static mut RIGHT_BUF: [f32; 512] = [0.0; 512];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -28,7 +28,7 @@ pub extern "C" fn process(num_samples: u32) {
         let e808 = ENGINE_808.as_mut().unwrap();
         let e909 = ENGINE_909.as_mut().unwrap();
         let seq = SEQ.as_mut().unwrap();
-        let n = (num_samples as usize).min(256);
+        let n = (num_samples as usize).min(512);
         for i in 0..n {
             seq.process(&mut SEQ_EVENTS);
             for ev in &SEQ_EVENTS {
