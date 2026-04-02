@@ -110,8 +110,12 @@ export function createNoteSequencerStore() {
         });
         engine?.setStepGate(fromIdx, false);
         const steps = get(seqSteps);
-        if (steps[toIdx].gate) { engine?.setStepNotes(toIdx, steps[toIdx].notes); }
-        else { engine?.setStepGate(toIdx, false); }
+        if (steps[toIdx].gate) {
+            engine?.setStepNotes(toIdx, steps[toIdx].notes);
+            engine?.setStepGatePct(toIdx, steps[toIdx].gatePct);
+        } else {
+            engine?.setStepGate(toIdx, false);
+        }
     }
 
     function clearSequence() {
@@ -137,6 +141,10 @@ export function createNoteSequencerStore() {
     }
     function setStepGatePct(val: number) {
         const step = get(seqSelectedStep);
+        seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
+        engine?.setStepGatePct(step, val);
+    }
+    function setStepGatePctAt(step: number, val: number) {
         seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
         engine?.setStepGatePct(step, val);
     }
@@ -205,7 +213,7 @@ export function createNoteSequencerStore() {
         // Actions
         addSeqPage, setSeqPage, selectSeqStep, setSeqStepFromNotes, setStepFromNotes,
         toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
-        setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
+        setStepVelocity, setStepGatePct, setStepGatePctAt, setStepProbability, setStepRatchet, toggleStepSkip,
         setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
         toggleSeqSettings, toggleStepSettings, closeAllDrawers,
     };

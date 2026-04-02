@@ -19,12 +19,10 @@
     />
     <span class="val" style="color: {colour}">{step.velocity}</span>
     <span class="sep"></span>
-    <span class="lbl">GATE</span>
-    <input type="range" min="5" max="100" step="1" value={step.gatePct}
-        oninput={(e) => seq.setStepGatePct(Number((e.target as HTMLInputElement).value))}
-        class="inline-slider" style="--c: {colour}; --fill-pct: {step.gatePct}%"
-    />
-    <span class="val" style="color: {colour}">{step.gatePct}%</span>
+    <span class="lbl">LEN</span>
+    {#each [1, 2, 3, 4, 8] as len}
+        <button class="btn" class:active={Math.round(step.gatePct / 100) === len} onclick={() => seq.setStepGatePct(len * 100)} style="--c: {colour}">{len}</button>
+    {/each}
     <span class="sep"></span>
     <span class="lbl">PROB</span>
     <input type="range" min="0" max="100" step="1" value={step.probability}

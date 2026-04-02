@@ -167,7 +167,7 @@ pub extern "C" fn set_param(id: u32, value: f32) {
 #[no_mangle] pub extern "C" fn seq_set_step_velocity(step: u8, vel: u8) {
     unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].velocity = vel; } } }
 }
-#[no_mangle] pub extern "C" fn seq_set_step_gate_pct(step: u8, pct: u8) {
+#[no_mangle] pub extern "C" fn seq_set_step_gate_pct(step: u8, pct: u16) {
     unsafe { if let Some(s) = SYNTH.as_mut() { let i = step as usize; if i < MAX_STEPS { s.sequencer.steps[i].gate_pct = pct; } } }
 }
 #[no_mangle] pub extern "C" fn seq_set_step_probability(step: u8, prob: u8) {

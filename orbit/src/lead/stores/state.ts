@@ -179,7 +179,7 @@ export function setSeqPage(page: number) {
     seqCurrentPage.set(Math.max(0, Math.min(page, pages - 1)));
 }
 
-export function setSeqStepFromPad(padIndex: number, targetStep?: number) {
+export function setSeqStepFromPad(padIndex: number, targetStep?: number, gatePct?: number) {
     const step = targetStep ?? get(seqSelectedStep);
     const mode = get(padMode);
     let notes: number[];
@@ -193,8 +193,10 @@ export function setSeqStepFromPad(padIndex: number, targetStep?: number) {
         notes = [n.note];
         label = n.label;
     }
-    seqSteps.update(s => { s[step] = { notes, gate: true, label }; return [...s]; });
+    const gp = gatePct ?? 75;
+    seqSteps.update(s => { s[step] = { ...s[step], notes, gate: true, label, gatePct: gp }; return [...s]; });
     engine?.setStepNotes(step, notes);
+    engine?.setStepGatePct(step, gp);
 }
 
 export function toggleSeqStepGate(step: number) {
@@ -259,6 +261,10 @@ export function setStepVelocity(val: number) {
 }
 export function setStepGatePct(val: number) {
     const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
+    engine?.setStepGatePct(step, val);
+}
+export function setStepGatePctAt(step: number, val: number) {
     seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
     engine?.setStepGatePct(step, val);
 }
@@ -342,6 +348,7 @@ export function moveStep(fromIdx: number, toIdx: number) {
     engine?.setStepGate(fromIdx, false);
     if (steps[toIdx].gate) {
         engine?.setStepNotes(toIdx, steps[toIdx].notes);
+        engine?.setStepGatePct(toIdx, steps[toIdx].gatePct);
     } else {
         engine?.setStepGate(toIdx, false);
     }
@@ -508,7 +515,7 @@ export const leadSeq: NoteSequencerStore = {
         engine?.setStepNotes(step, notes);
     },
     toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
-    setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
+    setStepVelocity, setStepGatePct, setStepGatePctAt, setStepProbability, setStepRatchet, toggleStepSkip,
     setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
     toggleSeqSettings, toggleStepSettings,
     closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); arpSettingsOpen.set(false); },

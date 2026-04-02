@@ -9,7 +9,7 @@ pub struct Step {
     pub num_notes: u8,
     pub gate: bool,
     pub velocity: u8,    // 0-127
-    pub gate_pct: u8,    // 0-100 (percentage of step length)
+    pub gate_pct: u16,   // percentage of step length; >100 sustains across multiple steps
     pub probability: u8, // 0-100
     pub ratchet: u8,     // 1-4 (subdivisions)
     pub skip: bool,
@@ -43,6 +43,8 @@ pub struct NoteSequencer {
     gate_active: bool,
     gate_samples: f32,
     gate_counter: f32,
+    active_notes: [u8; MAX_NOTES_PER_STEP],
+    active_num_notes: u8,
     trigger_pending: bool,
     // Ratchet state
     ratchet_count: u8,
@@ -69,6 +71,7 @@ impl NoteSequencer {
             state: PlayState::Stopped, current_step: 0, display_step: 0,
             sample_counter: 0.0, samples_per_step: 0.0,
             gate_active: false, gate_samples: 0.0, gate_counter: 0.0,
+            active_notes: [0; MAX_NOTES_PER_STEP], active_num_notes: 0,
             trigger_pending: false,
             ratchet_count: 0, ratchet_idx: 0, ratchet_samples: 0.0,
             ratchet_counter: 0.0, ratchet_step: Step::default(),
@@ -268,13 +271,29 @@ impl NoteSequencer {
     }
 
     fn trigger_current_step(&mut self, events: &mut Vec<NoteSeqEvent>) {
+        let step = self.steps[self.current_step];
+
+        // Long gate still sustaining — don't let other steps interrupt it
+        if self.gate_active && self.gate_counter < self.gate_samples {
+            if !step.gate || step.num_notes == 0 {
+                // Empty step: let the sustained note ring through
+                return;
+            }
+            if self.active_notes == step.notes
+                && self.active_num_notes == step.num_notes
+            {
+                // Same note: don't retrigger, let it ring
+                return;
+            }
+            // Different note: cut the sustained gate and fall through to play it
+        }
+
         // Release previous note if gate is still active
         if self.gate_active {
             self.gate_active = false;
             events.push(NoteSeqEvent::NoteOff);
         }
 
-        let step = self.steps[self.current_step];
         if step.skip || !step.gate || step.num_notes == 0 { return; }
 
         // Probability check
@@ -298,6 +317,8 @@ impl NoteSequencer {
         };
         self.gate_counter = 0.0;
         self.gate_active = true;
+        self.active_notes = step.notes;
+        self.active_num_notes = step.num_notes;
         events.push(NoteSeqEvent::NoteOn {
             notes: step.notes, num_notes: step.num_notes, velocity: step.velocity,
         });
