@@ -1,10 +1,13 @@
 <script lang="ts">
-    import { CHORDS, PAD_PARAMS } from './constants';
+    import { CHORDS, PAD_SETTINGS } from './constants';
     import { PRESETS } from './presets';
     import {
-        selectedChord, selectedPadParam, triggeredChords, padSliderValue,
+        selectedChord, triggeredChords,
         currentPresetIndex, arpEnabled, padSeq,
-        selectChord, selectPadParam, triggerChord, setPadSliderValue, loadPreset, toggleArp,
+        settingsOpen, settingsValues, toggleSettings, setSettingsParam,
+        quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
+        setQuickSlotSliderValue,
+        selectChord, triggerChord, loadPreset, toggleArp,
     } from './stores/state';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
     import { get } from 'svelte/store';
@@ -14,17 +17,24 @@
     import NoteSequencer from '../shared/components/NoteSequencer.svelte';
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
+    import SynthSettings from '../shared/components/SynthSettings.svelte';
 
     const PAD_COLOUR = '#E8944A';
 
     $: selChord = $selectedChord;
-    $: selParam = $selectedPadParam;
     $: triggered = $triggeredChords;
-    $: sliderVal = $padSliderValue;
-    $: colour = CHORDS[selChord]?.colour ?? PAD_COLOUR;
     $: presetIdx = $currentPresetIndex;
     $: arp = $arpEnabled;
 
+    $: showSettings = $settingsOpen;
+    $: settingsVals = $settingsValues;
+    $: slots = $quickSlots;
+    $: activeSlot = $activeQuickSlot;
+    $: activeSlotParam = activeSlot !== null ? slots[activeSlot] : null;
+    $: qsLabel = activeSlotParam?.name ?? '';
+    $: qsValue = activeSlotParam
+        ? ((settingsVals[activeSlotParam.id] ?? activeSlotParam.default) - activeSlotParam.min) / (activeSlotParam.max - activeSlotParam.min) * 100
+        : 0;
     $: ({ seqSettingsOpen: seqOpenStore, stepSettingsOpen: stepOpenStore } = padSeq);
     $: seqOpen = $seqOpenStore;
     $: stepOpen = $stepOpenStore;
@@ -85,29 +95,45 @@
         <button class="bar-btn" class:active={arp} onclick={toggleArp}>ARP</button>
         <button class="bar-btn" class:active={seqOpen} onclick={padSeq.toggleSeqSettings}>SEQ</button>
         <button class="bar-btn" class:active={stepOpen} onclick={padSeq.toggleStepSettings}>STEP</button>
+        <button class="bar-btn" class:active={showSettings} onclick={toggleSettings}>SETTINGS</button>
     </div>
-    {#if seqOpen}
-        <div class="drawer-row"><SeqSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
-    {:else if stepOpen}
-        <div class="drawer-row"><StepSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+    {#if showSettings}
+        <SynthSettings
+            sections={PAD_SETTINGS}
+            colour={PAD_COLOUR}
+            values={settingsVals}
+            onParamChange={setSettingsParam}
+            quickSlots={slots}
+            onAssignQuickSlot={assignQuickSlot}
+        />
+    {:else}
+        {#if seqOpen}
+            <div class="drawer-row"><SeqSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+        {:else if stepOpen}
+            <div class="drawer-row"><StepSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+        {/if}
+        <NoteSequencer colour={PAD_COLOUR} seq={padSeq} />
     {/if}
-    <NoteSequencer colour={PAD_COLOUR} seq={padSeq} />
     <PadCircle
         voices={CHORDS.map(c => ({ id: c.id, label: c.label, colour: c.colour }))}
-        params={[...PAD_PARAMS]}
+        params={[]}
         selectedVoice={selChord}
-        selectedParam={selParam}
+        selectedParam=""
         triggeredVoices={triggered}
         onPadClick={handlePadClick}
         onPadDown={handlePadDown}
-        onParamSelect={selectPadParam}
+        onParamSelect={() => {}}
+        quickSlots={slots}
+        activeQuickSlot={activeSlot}
+        colour={PAD_COLOUR}
+        onQuickSlotSelect={selectQuickSlot}
     />
     <PlayControls />
     <Slider
-        label={selParam}
-        value={sliderVal}
-        {colour}
-        onChange={setPadSliderValue}
+        label={qsLabel}
+        value={qsValue}
+        colour={PAD_COLOUR}
+        onChange={setQuickSlotSliderValue}
     />
 </div>
 

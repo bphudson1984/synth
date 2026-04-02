@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
-import { NUM_STEPS, ACID_PARAMS, ACID_PARAM_MAP, type AcidParamName } from '../constants';
+import { NUM_STEPS, ACID_PARAMS, ACID_PARAM_MAP, ACID_SETTINGS, type AcidParamName } from '../constants';
+import { NUM_QUICK_SLOTS, type QuickSlot, type SettingsParam } from '../../shared/types/settings';
 import type { AcidEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import { PRESETS } from '../presets';
@@ -74,6 +75,80 @@ export function setSliderValue(value: number) {
     engine?.setParam(mapping.id, actual);
 }
 
+// --- Settings ---
+export const settingsOpen = writable(false);
+
+function buildSettingsDefaults(): Record<number, number> {
+    const vals: Record<number, number> = {};
+    for (const section of ACID_SETTINGS) {
+        for (const p of section.params) {
+            vals[p.id] = p.default;
+        }
+    }
+    return vals;
+}
+
+export const settingsValues = writable<Record<number, number>>(buildSettingsDefaults());
+
+export function toggleSettings() {
+    settingsOpen.update(v => !v);
+}
+
+export function setSettingsParam(id: number, value: number) {
+    settingsValues.update(v => { v[id] = value; return { ...v }; });
+    engine?.setParam(id, value);
+}
+
+// --- Quick Slots ---
+function findSettingsParam(id: number): SettingsParam | null {
+    for (const section of ACID_SETTINGS) {
+        for (const p of section.params) if (p.id === id) return p;
+    }
+    return null;
+}
+
+function buildInitialSlots(): QuickSlot[] {
+    const slots: QuickSlot[] = Array(NUM_QUICK_SLOTS).fill(null);
+    const frontPanelIds = [PARAM.CUTOFF, PARAM.RESONANCE, PARAM.ENV_MOD, PARAM.DISTORTION];
+    frontPanelIds.forEach((id, i) => { slots[i] = findSettingsParam(id); });
+    return slots;
+}
+
+export const quickSlots = writable<QuickSlot[]>(buildInitialSlots());
+export const activeQuickSlot = writable<number | null>(0);
+
+export function assignQuickSlot(slotIndex: number, param: SettingsParam | null) {
+    quickSlots.update(s => { s[slotIndex] = param; return [...s]; });
+}
+
+export function selectQuickSlot(slotIndex: number) {
+    const slots = get(quickSlots);
+    if (!slots[slotIndex]) return;
+    activeQuickSlot.set(slotIndex);
+}
+
+export function clearQuickSlotSelection() {
+    activeQuickSlot.set(null);
+}
+
+export function getQuickSlotSliderValue(): number {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return 0;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return 0;
+    const raw = get(settingsValues)[slot.id] ?? slot.default;
+    return ((raw - slot.min) / (slot.max - slot.min)) * 100;
+}
+
+export function setQuickSlotSliderValue(value: number) {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return;
+    const actual = slot.min + (value / 100) * (slot.max - slot.min);
+    setSettingsParam(slot.id, actual);
+}
+
 export function toggleWaveform() {
     const next = get(waveform) === 'saw' ? 'square' : 'saw';
     waveform.set(next);
@@ -99,10 +174,14 @@ export function loadPreset(index: number) {
             : paramName === 'env mod' ? preset.envMod : preset.dist;
         engine.setParam(mapping.id, mapping.min + (sv / 100) * (mapping.max - mapping.min));
     }
-    engine.setParam(PARAM.DECAY, 0.03 + (preset.decay / 100) * 2.97);
-    engine.setParam(PARAM.ACCENT, preset.accent / 100);
+    const decayVal = 0.03 + (preset.decay / 100) * 2.97;
+    const accentVal = preset.accent / 100;
+    const waveVal = preset.waveform === 'saw' ? 0 : 1;
+    engine.setParam(PARAM.DECAY, decayVal);
+    engine.setParam(PARAM.ACCENT, accentVal);
     waveform.set(preset.waveform);
-    engine.setParam(PARAM.WAVEFORM, preset.waveform === 'saw' ? 0 : 1);
+    engine.setParam(PARAM.WAVEFORM, waveVal);
+    settingsValues.set({ [PARAM.DECAY]: decayVal, [PARAM.ACCENT]: accentVal, [PARAM.WAVEFORM]: waveVal });
     currentTranspose.set(0);
 }
 

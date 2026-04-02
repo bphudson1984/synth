@@ -1,10 +1,13 @@
 <script lang="ts">
-    import { SCALE_NOTES, SCALE_CHORDS, LEAD_PARAMS, LEAD_COLOUR, MODELS } from './constants';
+    import { SCALE_NOTES, SCALE_CHORDS, LEAD_COLOUR, LEAD_SETTINGS, MODELS } from './constants';
     import {
-        selectedModel, selectedParam, sliderValue, triggeredNotes, padMode, latchEnabled,
+        selectedModel, triggeredNotes, padMode, latchEnabled,
         currentLeadPreset, leadSeq,
         arpSettingsOpen, seqSettingsOpen, stepSettingsOpen,
-        selectModel, selectLeadParam, setSliderValue, triggerPad,
+        settingsOpen, settingsValues, toggleSettings, setSettingsParam,
+        quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
+        setQuickSlotSliderValue,
+        selectModel, triggerPad,
         togglePadMode, toggleLatch, setSeqStepFromPad,
         loadLeadPreset, toggleArpSettings, toggleSeqSettings, toggleStepSettings,
     } from './stores/state';
@@ -19,10 +22,9 @@
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
     import ArpSettings from './ArpSettings.svelte';
+    import SynthSettings from '../shared/components/SynthSettings.svelte';
 
     $: model = $selectedModel;
-    $: selParam = $selectedParam;
-    $: sliderVal = $sliderValue;
     $: triggered = $triggeredNotes;
     $: mode = $padMode;
     $: latch = $latchEnabled;
@@ -30,6 +32,15 @@
     $: arpOpen = $arpSettingsOpen;
     $: seqOpen = $seqSettingsOpen;
     $: stepOpen = $stepSettingsOpen;
+    $: showSettings = $settingsOpen;
+    $: settingsVals = $settingsValues;
+    $: slots = $quickSlots;
+    $: activeSlot = $activeQuickSlot;
+    $: activeSlotParam = activeSlot !== null ? slots[activeSlot] : null;
+    $: qsLabel = activeSlotParam?.name ?? '';
+    $: qsValue = activeSlotParam
+        ? ((settingsVals[activeSlotParam.id] ?? activeSlotParam.default) - activeSlotParam.min) / (activeSlotParam.max - activeSlotParam.min) * 100
+        : 0;
     $: anyDrawerOpen = arpOpen || seqOpen || stepOpen;
 
     function handlePresetChange(e: Event) {
@@ -102,24 +113,40 @@
         <button class="bar-btn" class:active={arpOpen} onclick={toggleArpSettings}>ARP</button>
         <button class="bar-btn" class:active={seqOpen} onclick={toggleSeqSettings}>SEQ</button>
         <button class="bar-btn" class:active={stepOpen} onclick={toggleStepSettings}>STEP</button>
+        <button class="bar-btn" class:active={showSettings} onclick={toggleSettings}>SETTINGS</button>
     </div>
-    {#if arpOpen}
-        <div class="drawer-row"><ArpSettings /></div>
-    {:else if seqOpen}
-        <div class="drawer-row"><SeqSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
-    {:else if stepOpen}
-        <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+    {#if showSettings}
+        <SynthSettings
+            sections={LEAD_SETTINGS}
+            colour={LEAD_COLOUR}
+            values={settingsVals}
+            onParamChange={setSettingsParam}
+            quickSlots={slots}
+            onAssignQuickSlot={assignQuickSlot}
+        />
+    {:else}
+        {#if arpOpen}
+            <div class="drawer-row"><ArpSettings /></div>
+        {:else if seqOpen}
+            <div class="drawer-row"><SeqSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+        {:else if stepOpen}
+            <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+        {/if}
+        <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
     {/if}
-    <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
     <PadCircle
         voices={pads}
-        params={[...LEAD_PARAMS]}
+        params={[]}
         selectedVoice={-1}
-        selectedParam={selParam}
+        selectedParam=""
         triggeredVoices={triggered}
         onPadClick={handlePadClick}
         onPadDown={handlePadDown}
-        onParamSelect={selectLeadParam}
+        onParamSelect={() => {}}
+        quickSlots={slots}
+        activeQuickSlot={activeSlot}
+        colour={LEAD_COLOUR}
+        onQuickSlotSelect={selectQuickSlot}
     />
     <div class="pad-controls">
         <button class="pill-btn" class:active={mode === 'chord'} onclick={togglePadMode}>
@@ -129,10 +156,10 @@
     </div>
     <PlayControls />
     <Slider
-        label={selParam}
-        value={sliderVal}
+        label={qsLabel}
+        value={qsValue}
         colour={LEAD_COLOUR}
-        onChange={setSliderValue}
+        onChange={setQuickSlotSliderValue}
     />
 </div>
 

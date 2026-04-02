@@ -1,5 +1,6 @@
 import { writable, derived, get } from 'svelte/store';
-import { CHORDS, PAD_PARAMS, PAD_PARAM_MAP, type PadParamName } from '../constants';
+import { CHORDS, PAD_PARAMS, PAD_PARAM_MAP, PAD_SETTINGS, type PadParamName } from '../constants';
+import { NUM_QUICK_SLOTS, type QuickSlot, type SettingsParam } from '../../shared/types/settings';
 import type { ProphetEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import { PRESETS, type Preset } from '../presets';
@@ -136,6 +137,82 @@ export function toggleArp() {
     }
 }
 
+// --- Settings ---
+export const settingsOpen = writable(false);
+
+// Build initial values from defaults
+function buildSettingsDefaults(): Record<number, number> {
+    const vals: Record<number, number> = {};
+    for (const section of PAD_SETTINGS) {
+        for (const p of section.params) {
+            vals[p.id] = p.default;
+        }
+    }
+    return vals;
+}
+
+export const settingsValues = writable<Record<number, number>>(buildSettingsDefaults());
+
+export function toggleSettings() {
+    settingsOpen.update(v => !v);
+}
+
+export function setSettingsParam(id: number, value: number) {
+    settingsValues.update(v => { v[id] = value; return { ...v }; });
+    engine?.setParam(id, value);
+}
+
+// --- Quick Slots ---
+function findSettingsParam(id: number): SettingsParam | null {
+    for (const section of PAD_SETTINGS) {
+        for (const p of section.params) if (p.id === id) return p;
+    }
+    return null;
+}
+
+function buildInitialSlots(): QuickSlot[] {
+    const slots: QuickSlot[] = Array(NUM_QUICK_SLOTS).fill(null);
+    // Pre-populate with front-panel params
+    const frontPanelIds = [PARAM.FILTER_CUTOFF, PARAM.FILTER_RESONANCE, PARAM.AMP_ATTACK, PARAM.AMP_RELEASE];
+    frontPanelIds.forEach((id, i) => { slots[i] = findSettingsParam(id); });
+    return slots;
+}
+
+export const quickSlots = writable<QuickSlot[]>(buildInitialSlots());
+export const activeQuickSlot = writable<number | null>(0);
+
+export function assignQuickSlot(slotIndex: number, param: SettingsParam | null) {
+    quickSlots.update(s => { s[slotIndex] = param; return [...s]; });
+}
+
+export function selectQuickSlot(slotIndex: number) {
+    const slots = get(quickSlots);
+    if (!slots[slotIndex]) return;
+    activeQuickSlot.set(slotIndex);
+}
+
+export function clearQuickSlotSelection() {
+    activeQuickSlot.set(null);
+}
+
+export function getQuickSlotSliderValue(): number {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return 0;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return 0;
+    const raw = get(settingsValues)[slot.id] ?? slot.default;
+    return ((raw - slot.min) / (slot.max - slot.min)) * 100;
+}
+
+export function setQuickSlotSliderValue(value: number) {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return;
+    const actual = slot.min + (value / 100) * (slot.max - slot.min);
+    setSettingsParam(slot.id, actual);
+}
+
 export function loadPreset(index: number) {
     const preset = PRESETS[index];
     if (!preset || !engine) return;
@@ -143,6 +220,13 @@ export function loadPreset(index: number) {
     for (const [id, value] of preset.params) {
         engine.setParam(id, value);
     }
+    // Update settings values to reflect preset
+    settingsValues.update(v => {
+        for (const [id, value] of preset.params) {
+            if (id in v) v[id] = value;
+        }
+        return { ...v };
+    });
     // Update slider values to reflect new preset's mapped params
     padParams.update(p => {
         for (const paramName of PAD_PARAMS) {
