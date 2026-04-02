@@ -36,6 +36,8 @@ pub struct PlateReverb {
     pub mix: f32,       // 0-1
 
     sample_rate: f32,
+    lfo_inc: f32,       // cached 1.0 / sample_rate
+    last_damping: f32,  // track damping changes
 
     // Delay length constants (scaled to 48kHz from Dattorro's 29761Hz)
     dl1_l: usize,
@@ -90,6 +92,8 @@ impl PlateReverb {
             size: 1.0,
             mix: 0.25,
             sample_rate,
+            lfo_inc: 1.0 / sample_rate,
+            last_damping: -1.0,
             dl1_l, dl2_l, dl1_r, dl2_r,
         }
     }
@@ -110,14 +114,16 @@ impl PlateReverb {
         }
 
         // Tank LFO (slow modulation prevents metallic ringing)
-        self.tank_lfo_phase += 1.0 / self.sample_rate;
+        self.tank_lfo_phase += self.lfo_inc;
         if self.tank_lfo_phase >= 1.0 { self.tank_lfo_phase -= 1.0; }
-        let _lfo = (self.tank_lfo_phase * 2.0 * PI).sin(); // used for AP modulation
 
-        // Update damping
-        let damp_coeff = 1.0 - self.damping * 0.7;
-        self.tank_damp_l.set_coeff(damp_coeff);
-        self.tank_damp_r.set_coeff(damp_coeff);
+        // Update damping only when parameter changes
+        if self.damping != self.last_damping {
+            self.last_damping = self.damping;
+            let damp_coeff = 1.0 - self.damping * 0.7;
+            self.tank_damp_l.set_coeff(damp_coeff);
+            self.tank_damp_r.set_coeff(damp_coeff);
+        }
 
         // Tank: cross-coupled channels
         // Read from end of other channel's delay2 (cross-coupling)

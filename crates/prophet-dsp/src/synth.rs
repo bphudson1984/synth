@@ -171,7 +171,7 @@ impl ProphetSynth {
             voice.wheel_mod_dest_pw_a = self.wheel_mod_dest_pw_a;
             voice.wheel_mod_dest_pw_b = self.wheel_mod_dest_pw_b;
             voice.wheel_mod_dest_filter = self.wheel_mod_dest_filter;
-            voice.pitch_bend_semitones = bend_semitones;
+            voice.set_pitch_bend(bend_semitones);
         }
 
         // Sum voices
@@ -232,8 +232,8 @@ impl SynthEngine for ProphetSynth {
             4 => self.for_each_voice(|v| v.osc_b.set_tri(value > 0.5)),
             5 => self.for_each_voice(|v| v.osc_b.set_pulse(value > 0.5)),
             6 => self.for_each_voice(|v| v.osc_b_pw = value),
-            7 => self.for_each_voice(|v| v.osc_b_semitones = value),
-            8 => self.for_each_voice(|v| v.osc_b_fine = value),
+            7 => self.for_each_voice(|v| v.set_osc_b_semitones(value)),
+            8 => self.for_each_voice(|v| v.set_osc_b_fine(value)),
             // Mixer
             9 => self.for_each_voice(|v| v.osc_a_level = value),
             10 => self.for_each_voice(|v| v.osc_b_level = value),

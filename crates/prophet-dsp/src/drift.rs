@@ -8,6 +8,7 @@ pub struct DriftGenerator {
     filter_state: f32,
     value: f32,
     amount: f32, // max drift in Hz
+    coeff: f32,  // cached filter coefficient
 }
 
 impl DriftGenerator {
@@ -17,11 +18,18 @@ impl DriftGenerator {
             filter_state: 0.0,
             value: 0.0,
             amount: 0.0,
+            coeff: 0.0, // initialized on first process() call
         }
     }
 
     pub fn set_amount(&mut self, hz: f32) {
         self.amount = hz;
+    }
+
+    /// Call once after sample rate is known to cache the filter coefficient.
+    pub fn init_sample_rate(&mut self, sample_rate: f32) {
+        let cutoff = 0.5;
+        self.coeff = (-2.0 * std::f32::consts::PI * cutoff / sample_rate).exp();
     }
 
     /// Process one sample. Returns drift offset in Hz.
@@ -30,11 +38,12 @@ impl DriftGenerator {
             self.value = 0.0;
             return 0.0;
         }
-        // Single-pole lowpass at ~0.5Hz for slow wandering
-        let cutoff = 0.5;
-        let coeff = (-2.0 * std::f32::consts::PI * cutoff / sample_rate).exp();
+        // Lazy init if coeff hasn't been set
+        if self.coeff == 0.0 {
+            self.init_sample_rate(sample_rate);
+        }
         let white = self.noise.white();
-        self.filter_state = self.filter_state * coeff + white * (1.0 - coeff);
+        self.filter_state = self.filter_state * self.coeff + white * (1.0 - self.coeff);
         self.value = self.filter_state * self.amount;
         self.value
     }

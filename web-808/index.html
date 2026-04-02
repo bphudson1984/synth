@@ -279,7 +279,7 @@
             status.textContent = 'Loading...';
 
             try {
-                const ctx = new AudioContext({ latencyHint: 'playback' });
+                const ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' });
                 // Fetch raw WASM bytes — Chrome silently drops WebAssembly.Module
                 // objects posted to AudioWorklet threads, causing init to hang.
                 const wasmBytes = await (await fetch('/public/tr808.wasm')).arrayBuffer();

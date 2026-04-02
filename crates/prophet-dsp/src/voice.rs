@@ -43,11 +43,13 @@ pub struct Voice {
     pub wheel_mod_dest_filter: bool,
 
     // Pitch bend (semitones, set by synth engine)
-    pub pitch_bend_semitones: f32,
+    pitch_bend_semitones: f32,
+    bend_factor: f32, // cached 2^(pitch_bend_semitones/12)
 
     // Osc B independent pitch
-    pub osc_b_semitones: f32, // -24 to +24 (octave offset in semitones)
-    pub osc_b_fine: f32,      // -100 to +100 cents
+    osc_b_semitones: f32, // -24 to +24 (octave offset in semitones)
+    osc_b_fine: f32,      // -100 to +100 cents
+    osc_b_ratio: f32,     // cached 2^((semitones + fine/100) / 12)
 
     // Velocity
     velocity: f32, // 0.0-1.0
@@ -97,8 +99,10 @@ impl Voice {
             wheel_mod_dest_pw_b: false,
             wheel_mod_dest_filter: false,
             pitch_bend_semitones: 0.0,
+            bend_factor: 1.0,
             osc_b_semitones: 0.0,
             osc_b_fine: 0.0,
+            osc_b_ratio: 1.0,
             velocity: 1.0,
             osc_a_pw: 0.5,
             osc_b_pw: 0.5,
@@ -113,6 +117,21 @@ impl Voice {
 
     pub fn set_glide_enabled(&mut self, enabled: bool) {
         self.glide.set_enabled(enabled);
+    }
+
+    pub fn set_pitch_bend(&mut self, semitones: f32) {
+        self.pitch_bend_semitones = semitones;
+        self.bend_factor = 2.0f32.powf(semitones / 12.0);
+    }
+
+    pub fn set_osc_b_semitones(&mut self, semitones: f32) {
+        self.osc_b_semitones = semitones;
+        self.osc_b_ratio = 2.0f32.powf((self.osc_b_semitones + self.osc_b_fine / 100.0) / 12.0);
+    }
+
+    pub fn set_osc_b_fine(&mut self, cents: f32) {
+        self.osc_b_fine = cents;
+        self.osc_b_ratio = 2.0f32.powf((self.osc_b_semitones + self.osc_b_fine / 100.0) / 12.0);
     }
 
     pub fn set_drift_amount(&mut self, hz: f32) {
@@ -157,13 +176,11 @@ impl Voice {
         // Glide (portamento)
         let base_hz = self.glide.process(self.sample_rate);
 
-        // Pitch bend
-        let bend_factor = 2.0f32.powf(self.pitch_bend_semitones / 12.0);
-        let bent_hz = (base_hz + self.unison_detune_hz) * bend_factor;
+        // Pitch bend (cached — updated via set_pitch_bend)
+        let bent_hz = (base_hz + self.unison_detune_hz) * self.bend_factor;
 
-        // Osc B independent pitch: semitone offset + fine tune in cents
-        let osc_b_ratio = 2.0f32.powf((self.osc_b_semitones + self.osc_b_fine / 100.0) / 12.0);
-        let osc_b_base_hz = bent_hz * osc_b_ratio;
+        // Osc B independent pitch (cached — updated via set_osc_b_semitones/fine)
+        let osc_b_base_hz = bent_hz * self.osc_b_ratio;
 
         // Per-voice drift
         let drift_a = self.drift_a.process(self.sample_rate);
@@ -431,7 +448,7 @@ mod tests {
         v.osc_b.set_saw(true);
         v.osc_a_level = 0.5;
         v.osc_b_level = 1.0;
-        v.osc_b_semitones = -12.0; // one octave lower
+        v.set_osc_b_semitones(-12.0); // one octave lower
         v.filter_cutoff = 20000.0;
         v.amp_env.set_attack(0.001);
         v.amp_env.set_sustain(1.0);
@@ -449,7 +466,7 @@ mod tests {
         v_detuned.osc_b.set_saw(true);
         v_detuned.osc_a_level = 0.7;
         v_detuned.osc_b_level = 0.7;
-        v_detuned.osc_b_fine = 10.0; // 10 cents sharp
+        v_detuned.set_osc_b_fine(10.0); // 10 cents sharp
         v_detuned.filter_cutoff = 20000.0;
         v_detuned.amp_env.set_attack(0.001);
         v_detuned.amp_env.set_sustain(1.0);
@@ -462,7 +479,7 @@ mod tests {
         v_unison.osc_b.set_saw(true);
         v_unison.osc_a_level = 0.7;
         v_unison.osc_b_level = 0.7;
-        v_unison.osc_b_fine = 0.0;
+        v_unison.set_osc_b_fine(0.0);
         v_unison.filter_cutoff = 20000.0;
         v_unison.amp_env.set_attack(0.001);
         v_unison.amp_env.set_sustain(1.0);

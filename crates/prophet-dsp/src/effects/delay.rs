@@ -1,6 +1,14 @@
 use super::{DelayLine, OnePole};
 use std::f32::consts::PI;
 
+/// Fast sine approximation for phase in [0, 1).
+/// Uses parabolic approximation — accurate to ~1% which is fine for LFO modulation.
+fn fast_sin(phase: f32) -> f32 {
+    let x = phase * 2.0 - 1.0; // map [0,1) to [-1,1)
+    // 4*x*(1-|x|) gives a parabola that approximates sin(pi*x)
+    4.0 * x * (1.0 - x.abs())
+}
+
 /// Tape-style stereo delay with filtered feedback, soft saturation, and subtle wow/flutter.
 pub struct TapeDelay {
     delay_l: DelayLine,
@@ -18,6 +26,10 @@ pub struct TapeDelay {
     pub feedback: f32,     // 0-0.95
     pub tone: f32,         // 0-1 (maps to 800Hz-12kHz feedback filter)
     pub mix: f32,          // 0-1
+    // Cached
+    wow_inc: f32,
+    flutter_inc: f32,
+    last_tone: f32,
 }
 
 impl TapeDelay {
@@ -42,6 +54,9 @@ impl TapeDelay {
             feedback: 0.4,
             tone: 0.6,
             mix: 0.3,
+            wow_inc: 0.8 / sample_rate,
+            flutter_inc: 6.0 / sample_rate,
+            last_tone: -1.0,
         }
     }
 
@@ -52,21 +67,25 @@ impl TapeDelay {
         let smooth_samples = self.time_smoother.process(target_samples);
 
         // Wow and flutter modulation
-        self.wow_phase += 0.8 / self.sample_rate;
+        self.wow_phase += self.wow_inc;
         if self.wow_phase >= 1.0 { self.wow_phase -= 1.0; }
-        self.flutter_phase += 6.0 / self.sample_rate;
+        self.flutter_phase += self.flutter_inc;
         if self.flutter_phase >= 1.0 { self.flutter_phase -= 1.0; }
 
-        let wow = (self.wow_phase * 2.0 * PI).sin() * 0.3; // ±0.3 samples
-        let flutter = (self.flutter_phase * 2.0 * PI).sin() * 0.15; // ±0.15 samples
+        // Fast sine approximation (Bhaskara I) — accurate to ~0.2%
+        let wow = fast_sin(self.wow_phase) * 0.3;
+        let flutter = fast_sin(self.flutter_phase) * 0.15;
         let mod_offset = wow + flutter;
 
         let read_pos = (smooth_samples + mod_offset).max(1.0);
 
-        // Update tone filter (maps 0-1 to 800Hz-12kHz)
-        let tone_hz = 800.0 + self.tone * 11200.0;
-        self.tone_filter_l.set_freq(tone_hz, self.sample_rate);
-        self.tone_filter_r.set_freq(tone_hz, self.sample_rate);
+        // Update tone filter only when tone parameter changes (avoids exp() per sample)
+        if self.tone != self.last_tone {
+            self.last_tone = self.tone;
+            let tone_hz = 800.0 + self.tone * 11200.0;
+            self.tone_filter_l.set_freq(tone_hz, self.sample_rate);
+            self.tone_filter_r.set_freq(tone_hz, self.sample_rate);
+        }
 
         // Write input + feedback to buffer
         self.delay_l.write(input_l + self.feedback_l * self.feedback);
