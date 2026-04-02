@@ -13,7 +13,8 @@
 
     // Destructure stores from the seq instance
     $: ({ seqSteps: stepsStore, seqSelectedStep: selStore, seqCurrentStep: curStore,
-          seqNumPages: numPagesStore, seqCurrentPage: pageStore } = seq);
+          seqNumPages: numPagesStore, seqCurrentPage: pageStore, lenMode: lenModeStore } = seq);
+    $: inLenMode = $lenModeStore;
     $: steps = $stepsStore;
     $: sel = $selStore;
     $: cur = $curStore;
@@ -92,7 +93,11 @@
         dragFrom = null; dragGhostStore.set(null);
     }
 
-    function handleStepClick(globalIdx: number) { if (!didDrag) seq.selectSeqStep(globalIdx); }
+    function handleStepClick(globalIdx: number) {
+        if (didDrag) return;
+        if (inLenMode) { seq.setLenFromStep(globalIdx); return; }
+        seq.selectSeqStep(globalIdx);
+    }
     function handleStepDblClick(globalIdx: number) { if (!didDrag) seq.toggleSeqStepGate(globalIdx); }
 </script>
 
@@ -124,6 +129,7 @@
                         <button class="cell" class:active={step?.gate} class:selected={sel === globalIdx}
                             class:playhead={playing && cur === globalIdx} class:drag-source={dragFrom === globalIdx}
                             class:skipped={step?.skip && step?.gate} class:low-prob={step?.gate && step?.probability < 80}
+                            class:len-mode={inLenMode} class:len-origin={inLenMode && sel === globalIdx}
                             data-idx={globalIdx}
                             onclick={() => handleStepClick(globalIdx)} ondblclick={() => handleStepDblClick(globalIdx)}
                             onpointerdown={(e) => onCellPointerDown(e, globalIdx)}>
@@ -176,6 +182,9 @@
     .cell.skipped { opacity: 0.35; text-decoration: line-through; }
     .cell.low-prob { border-style: dashed; }
     .note-label { font-size: 9px; font-weight: 500; color: var(--orbit-ink); pointer-events: none; letter-spacing: 0.3px; }
+    .cell.len-mode { cursor: crosshair; }
+    .cell.len-origin { box-shadow: 0 0 0 2px var(--seq-colour); animation: pulse-origin 800ms infinite alternate; }
+    @keyframes pulse-origin { from { opacity: 1; } to { opacity: 0.6; } }
     .len-badge { position: absolute; top: 1px; right: 3px; font-size: 7px; font-weight: 400; color: var(--seq-colour); pointer-events: none; opacity: 0.7; }
     .ratchet-dots { position: absolute; bottom: 1px; font-size: 6px; color: var(--seq-colour); pointer-events: none; line-height: 1; }
     .drag-ghost { position: fixed; pointer-events: none; z-index: 1000; transform: translate(-50%, -50%); padding: 4px 8px; color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 500; border-radius: 6px; box-shadow: 0 0 12px rgba(0,0,0,0.5); }

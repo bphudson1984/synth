@@ -218,6 +218,19 @@ export const seqSwing = writable(0);      // 0-100
 export const seqTimeDivision = writable(2); // 0=1/4, 1=1/8, 2=1/16, 3=1/32
 export const seqSettingsOpen = writable(false);
 export const stepSettingsOpen = writable(false);
+export const lenMode = writable(false);
+
+export function toggleLenMode() { lenMode.update(v => !v); }
+export function setLenFromStep(endStep: number) {
+    const start = get(seqSelectedStep);
+    const step = get(seqSteps)[start];
+    if (!step?.gate || endStep === start) { lenMode.set(false); return; }
+    const len = endStep > start ? endStep - start : (get(seqSteps).length - start + endStep);
+    const gatePct = Math.max(100, len * 100);
+    seqSteps.update(s => { s[start].gatePct = gatePct; return [...s]; });
+    engine?.setStepGatePct(start, gatePct);
+    lenMode.set(false);
+}
 
 export function toggleSeqSettings() {
     seqSettingsOpen.update(v => { if (!v) { stepSettingsOpen.set(false); arpSettingsOpen.set(false); } return !v; });
@@ -506,7 +519,7 @@ function arpTick() {
 // --- Adapter: bundle sequencer stores for shared NoteSequencer components ---
 export const leadSeq: NoteSequencerStore = {
     seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
-    seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen,
+    seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode,
     connectEngine: () => {}, connectOnStep: () => {},
     addSeqPage, setSeqPage, selectSeqStep,
     setSeqStepFromNotes: (notes: number[], label: string) => {
@@ -517,6 +530,7 @@ export const leadSeq: NoteSequencerStore = {
     toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
     setStepVelocity, setStepGatePct, setStepGatePctAt, setStepProbability, setStepRatchet, toggleStepSkip,
     setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
+    toggleLenMode, setLenFromStep,
     toggleSeqSettings, toggleStepSettings,
-    closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); arpSettingsOpen.set(false); },
+    closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); lenMode.set(false); arpSettingsOpen.set(false); },
 };
