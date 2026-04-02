@@ -6,7 +6,8 @@ export class AudioEngine {
     get ready() { return this._ready; }
 
     async init(): Promise<void> {
-        this.ctx = new AudioContext({ sampleRate: 48000, latencyHint: 'playback' });
+        const isFirefox = /Firefox/.test(navigator.userAgent);
+        this.ctx = new AudioContext({ sampleRate: 48000, latencyHint: isFirefox ? 0.08 : 'playback' });
 
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)
@@ -44,7 +45,7 @@ export class AudioEngine {
 
             // Transfer the WASM bytes to the worklet (zero-copy via transferable)
             this.node!.port.postMessage(
-                { type: 'wasm-bytes', bytes: wasmBytes },
+                { type: 'wasm-bytes', bytes: wasmBytes, useDoubleBuffer: isFirefox },
                 [wasmBytes]
             );
         });

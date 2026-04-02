@@ -14,8 +14,8 @@ static mut DELAY: Option<TapeDelay> = None;
 static mut REVERB: Option<PlateReverb> = None;
 static mut ARP: Option<Arpeggiator> = None;
 static mut ARP_LAST_NOTE: u8 = 0;
-static mut LEFT_BUF: [f32; 256] = [0.0; 256];
-static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
+static mut LEFT_BUF: [f32; 512] = [0.0; 512];
+static mut RIGHT_BUF: [f32; 512] = [0.0; 512];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -54,7 +54,7 @@ pub extern "C" fn process(num_samples: u32) {
         let reverb = REVERB.as_mut().unwrap();
         let arp = ARP.as_mut().unwrap();
 
-        let n = (num_samples as usize).min(256);
+        let n = (num_samples as usize).min(512);
         for i in 0..n {
             // Arpeggiator generates note events
             if let Some((note, vel)) = arp.process() {
