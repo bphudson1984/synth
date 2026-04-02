@@ -37,6 +37,8 @@
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('acid'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('acid')) toggleSection('acid'); }}>Acid Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('lead'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('lead')) toggleSection('lead'); }}>Lead Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('mix'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('mix')) toggleSection('mix'); }}>Mixer</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('fx'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('fx')) toggleSection('fx'); }}>FX Panel</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('glitch'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('glitch')) toggleSection('glitch'); }}>Glitch</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('sequencer'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('sequencer')) toggleSection('sequencer'); }}>Sequencer &amp; Recording</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('tips'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('tips')) toggleSection('tips'); }}>Tips &amp; Tricks</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('specs'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('specs')) toggleSection('specs'); }}>Technical Specs</button></li>
@@ -503,10 +505,182 @@
         {/if}
     </section>
 
+    <!-- FX PANEL -->
+    <section id="fx" class="section">
+        <button class="section-header" onclick={() => toggleSection('fx')}>
+            <span class="section-number">07</span>
+            <span class="section-title">FX Panel</span>
+            <span class="chevron" class:open={isOpen('fx')}>▸</span>
+        </button>
+        {#if isOpen('fx')}
+            <div class="section-body">
+                <p>
+                    The FX panel provides four studio-quality send effects that can be applied
+                    to any combination of the four instrument channels. Each effect has its own
+                    adjustable parameters and per-channel send levels.
+                </p>
+
+                <h3>Effects</h3>
+                <p>
+                    Four effect tabs sit at the top of the panel. Tap a tab to select that effect
+                    and view its parameters and send levels:
+                </p>
+                <table>
+                    <thead><tr><th>Tab</th><th>Effect</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>CHORUS</td><td>Chorus</td><td>Adds width and movement by layering modulated copies of the signal</td></tr>
+                        <tr><td>DELAY</td><td>Delay</td><td>Repeating echo effect with adjustable time and feedback</td></tr>
+                        <tr><td>REVERB</td><td>Reverb</td><td>Simulates room ambience and space</td></tr>
+                        <tr><td>DISTORT</td><td>Distortion</td><td>Overdrive and saturation for grit and warmth</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Effect Parameters</h3>
+                <p>
+                    Each effect has its own set of parameters controlled by horizontal sliders.
+                    The current value is shown to the right of each slider.
+                </p>
+
+                <h4>Chorus</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>RATE</td><td>0.1 – 5 Hz</td><td>Speed of the modulation — lower values produce a gentle sway, higher values create a vibrato</td></tr>
+                        <tr><td>DEPTH</td><td>0 – 1</td><td>Intensity of the modulation — higher values produce a more pronounced chorus effect</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Delay</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>TIME</td><td>1 – 1000 ms</td><td>Delay time between repeats</td></tr>
+                        <tr><td>FEEDBACK</td><td>0 – 0.95</td><td>How many repeats — higher values produce longer echo trails</td></tr>
+                        <tr><td>TONE</td><td>0 – 1</td><td>Brightness of the echoes — lower values darken successive repeats</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Reverb</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>DECAY</td><td>0 – 0.99</td><td>Length of the reverb tail — higher values simulate larger spaces</td></tr>
+                        <tr><td>DAMPING</td><td>0 – 1</td><td>High-frequency absorption — higher values make the reverb darker and more natural</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Distortion</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>DRIVE</td><td>0 – 1</td><td>Amount of overdrive / saturation</td></tr>
+                        <tr><td>TONE</td><td>0 – 1</td><td>Brightness of the distorted signal</td></tr>
+                        <tr><td>LEVEL</td><td>0 – 1</td><td>Output volume of the distortion effect</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Sends</h3>
+                <p>
+                    Below the parameters, four vertical faders control how much of each instrument
+                    channel is routed into the currently selected effect. Each fader ranges from
+                    0 (no send) to 100 (full send):
+                </p>
+                <table>
+                    <thead><tr><th>Label</th><th>Channel</th><th>Colour</th></tr></thead>
+                    <tbody>
+                        <tr><td>DR</td><td>Drum</td><td><span class="colour-swatch" style="background:#378ADD"></span> Blue</td></tr>
+                        <tr><td>PD</td><td>Pad</td><td><span class="colour-swatch" style="background:#E8944A"></span> Orange</td></tr>
+                        <tr><td>AC</td><td>Acid</td><td><span class="colour-swatch" style="background:#5DBE6E"></span> Green</td></tr>
+                        <tr><td>LD</td><td>Lead</td><td><span class="colour-swatch" style="background:#B56ECC"></span> Purple</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    Send levels are independent per effect — for example, you can send the drum
+                    channel heavily into reverb while keeping it dry on delay, and send the acid
+                    channel into distortion without affecting the pad.
+                </p>
+
+                <h3>Workflow</h3>
+                <ol>
+                    <li>Select an effect tab (e.g. REVERB).</li>
+                    <li>Adjust the effect parameters to taste (e.g. set DECAY to 0.6 for a medium room).</li>
+                    <li>Raise the send fader for each channel you want to apply the effect to.</li>
+                    <li>Switch tabs to configure additional effects and their sends.</li>
+                </ol>
+            </div>
+        {/if}
+    </section>
+
+    <!-- GLITCH -->
+    <section id="glitch" class="section">
+        <button class="section-header" onclick={() => toggleSection('glitch')}>
+            <span class="section-number">08</span>
+            <span class="section-title">Glitch</span>
+            <span class="chevron" class:open={isOpen('glitch')}>▸</span>
+        </button>
+        {#if isOpen('glitch')}
+            <div class="section-body">
+                <p>
+                    The Glitch feature (labelled <strong>GLT</strong>) is a real-time beat-repeat
+                    / stutter effect available on every panel. When activated, it rapidly re-triggers
+                    a short segment of the current audio to create rhythmic glitch and stutter effects.
+                </p>
+
+                <h3>How It Works</h3>
+                <p>
+                    The GLT control appears in the transport bar at the bottom of each panel.
+                    It consists of four circular buttons labelled <strong>8</strong>,
+                    <strong>4</strong>, <strong>2</strong>, and <strong>1</strong>. Each number
+                    represents a beat division:
+                </p>
+                <table>
+                    <thead><tr><th>Button</th><th>Division</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>8</td><td>1/8 note</td><td>Fastest stutter — rapid-fire retriggering</td></tr>
+                        <tr><td>4</td><td>1/4 note</td><td>Fast stutter</td></tr>
+                        <tr><td>2</td><td>1/2 note</td><td>Medium stutter</td></tr>
+                        <tr><td>1</td><td>1 beat</td><td>Slowest stutter — longer repeated segment</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Using the Glitch</h3>
+                <ol>
+                    <li><strong>Press and hold</strong> a GLT button to activate the stutter effect. The button glows to indicate it is active.</li>
+                    <li><strong>Slide</strong> across buttons while holding to change the stutter size in real time for expressive fills.</li>
+                    <li><strong>Release</strong> to stop the glitch — playback returns to normal immediately.</li>
+                </ol>
+
+                <h3>Per-Panel Glitch</h3>
+                <p>
+                    Each instrument panel has its own independent glitch control that only affects
+                    that engine's audio:
+                </p>
+                <table>
+                    <thead><tr><th>Panel</th><th>Glitch Colour</th><th>Affects</th></tr></thead>
+                    <tbody>
+                        <tr><td>DRUM</td><td><span class="colour-swatch" style="background:#378ADD"></span> Blue</td><td>Drum machine output only</td></tr>
+                        <tr><td>PAD</td><td><span class="colour-swatch" style="background:#E8944A"></span> Orange</td><td>Pad synth output only</td></tr>
+                        <tr><td>ACID</td><td><span class="colour-swatch" style="background:#5DBE6E"></span> Green</td><td>Acid synth output only</td></tr>
+                        <tr><td>LEAD</td><td><span class="colour-swatch" style="background:#B56ECC"></span> Purple</td><td>Lead synth output only</td></tr>
+                        <tr><td>MIX / FX</td><td>White</td><td>Master output — glitches all channels together</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Tips</h3>
+                <ul>
+                    <li>Use the <strong>8</strong> division on drums for classic rapid-fire snare fills.</li>
+                    <li>Try the <strong>1</strong> division on pads for a rhythmic gating effect.</li>
+                    <li>Slide from <strong>1 → 8</strong> during a build-up for an accelerating stutter.</li>
+                    <li>The MIX / FX glitch affects the master output, so it stutters all four channels simultaneously — great for dramatic breakdowns.</li>
+                </ul>
+            </div>
+        {/if}
+    </section>
+
     <!-- SEQUENCER & RECORDING -->
     <section id="sequencer" class="section">
         <button class="section-header" onclick={() => toggleSection('sequencer')}>
-            <span class="section-number">07</span>
+            <span class="section-number">09</span>
             <span class="section-title">Sequencer &amp; Recording</span>
             <span class="chevron" class:open={isOpen('sequencer')}>▸</span>
         </button>
@@ -585,7 +759,7 @@
     <!-- TIPS & TRICKS -->
     <section id="tips" class="section">
         <button class="section-header" onclick={() => toggleSection('tips')}>
-            <span class="section-number">08</span>
+            <span class="section-number">10</span>
             <span class="section-title">Tips &amp; Tricks</span>
             <span class="chevron" class:open={isOpen('tips')}>▸</span>
         </button>
@@ -635,7 +809,7 @@
     <!-- TECHNICAL SPECS -->
     <section id="specs" class="section">
         <button class="section-header" onclick={() => toggleSection('specs')}>
-            <span class="section-number">09</span>
+            <span class="section-number">11</span>
             <span class="section-title">Technical Specs</span>
             <span class="chevron" class:open={isOpen('specs')}>▸</span>
         </button>
