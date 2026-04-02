@@ -12,10 +12,22 @@
     import AcidPanel from './acid/AcidPanel.svelte';
     import LeadPanel from './lead/LeadPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
+    import HelpPanel from './help/HelpPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
+    let showHelp = $state(window.location.pathname === '/help');
     let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'mix'>('drum');
+
+    function openHelp() {
+        showHelp = true;
+        window.history.pushState({}, '', '/help');
+    }
+
+    function closeHelp() {
+        showHelp = false;
+        window.history.pushState({}, '', '/');
+    }
 
     async function start() {
         loading = true;
@@ -39,13 +51,16 @@
     }
 </script>
 
-{#if !started}
+{#if showHelp}
+    <HelpPanel onBack={closeHelp} />
+{:else if !started}
     <div class="splash">
         <div class="brand">Hudsonic</div>
         <div class="logo">ORBIT</div>
         <button class="start-btn" onclick={start} disabled={loading}>
             {loading ? 'LOADING...' : 'TAP TO START'}
         </button>
+        <button class="splash-help-btn" onclick={openHelp}>?</button>
     </div>
 {:else}
     <div class="app">
@@ -54,7 +69,8 @@
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
-            <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
+            <button class="tab-btn tab-last" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
+            <button class="help-btn" onclick={openHelp}>?</button>
         </nav>
         {#if panel === 'drum'}
             <DrumPanel />
@@ -130,6 +146,28 @@
     }
     .start-btn:hover { background: var(--orbit-ink); color: var(--orbit-surface); }
     .start-btn:disabled { opacity: 0.5; cursor: wait; }
+    .splash-help-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--orbit-hint, #666);
+        border: 1.5px solid var(--orbit-border, #333);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 120ms;
+    }
+    .splash-help-btn:hover {
+        background: var(--orbit-ink, #eee);
+        color: var(--orbit-surface, #111);
+        border-color: var(--orbit-ink, #eee);
+    }
 
     .app {
         height: 100dvh;
@@ -159,9 +197,33 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .tab-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
-    .tab-btn:not(:first-child):not(:last-child) { border-radius: 0; border-right: none; }
-    .tab-btn:last-child { border-radius: 0 12px 12px 0; }
+    .tab-btn:not(:first-child):not(.tab-last) { border-radius: 0; border-right: none; }
+    .tab-btn.tab-last { border-radius: 0 12px 12px 0; }
     .tab-btn.active {
+        background: var(--orbit-ink, #eee);
+        color: var(--orbit-surface, #111);
+        border-color: var(--orbit-ink, #eee);
+    }
+    .help-btn {
+        width: 28px;
+        height: 28px;
+        margin-left: 10px;
+        border-radius: 50%;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 500;
+        background: transparent;
+        color: var(--orbit-hint, #666);
+        border: 1.5px solid var(--orbit-border, #444);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
+        flex-shrink: 0;
+    }
+    .help-btn:hover {
         background: var(--orbit-ink, #eee);
         color: var(--orbit-surface, #111);
         border-color: var(--orbit-ink, #eee);
