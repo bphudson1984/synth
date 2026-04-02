@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { CHORDS, PAD_PARAMS } from './constants';
+    import { CHORDS, PAD_PARAMS, PAD_SETTINGS } from './constants';
     import { PRESETS } from './presets';
     import {
         selectedChord, selectedPadParam, triggeredChords, padSliderValue,
         currentPresetIndex, arpEnabled, padSeq,
+        settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         selectChord, selectPadParam, triggerChord, setPadSliderValue, loadPreset, toggleArp,
     } from './stores/state';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
@@ -14,6 +15,7 @@
     import NoteSequencer from '../shared/components/NoteSequencer.svelte';
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
+    import SynthSettings from '../shared/components/SynthSettings.svelte';
 
     const PAD_COLOUR = '#E8944A';
 
@@ -25,6 +27,8 @@
     $: presetIdx = $currentPresetIndex;
     $: arp = $arpEnabled;
 
+    $: showSettings = $settingsOpen;
+    $: settingsVals = $settingsValues;
     $: ({ seqSettingsOpen: seqOpenStore, stepSettingsOpen: stepOpenStore } = padSeq);
     $: seqOpen = $seqOpenStore;
     $: stepOpen = $stepOpenStore;
@@ -85,30 +89,40 @@
         <button class="bar-btn" class:active={arp} onclick={toggleArp}>ARP</button>
         <button class="bar-btn" class:active={seqOpen} onclick={padSeq.toggleSeqSettings}>SEQ</button>
         <button class="bar-btn" class:active={stepOpen} onclick={padSeq.toggleStepSettings}>STEP</button>
+        <button class="bar-btn" class:active={showSettings} onclick={toggleSettings}>SETTINGS</button>
     </div>
-    {#if seqOpen}
-        <div class="drawer-row"><SeqSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
-    {:else if stepOpen}
-        <div class="drawer-row"><StepSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+    {#if showSettings}
+        <SynthSettings
+            sections={PAD_SETTINGS}
+            colour={PAD_COLOUR}
+            values={settingsVals}
+            onParamChange={setSettingsParam}
+        />
+    {:else}
+        {#if seqOpen}
+            <div class="drawer-row"><SeqSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+        {:else if stepOpen}
+            <div class="drawer-row"><StepSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
+        {/if}
+        <NoteSequencer colour={PAD_COLOUR} seq={padSeq} />
+        <PadCircle
+            voices={CHORDS.map(c => ({ id: c.id, label: c.label, colour: c.colour }))}
+            params={[...PAD_PARAMS]}
+            selectedVoice={selChord}
+            selectedParam={selParam}
+            triggeredVoices={triggered}
+            onPadClick={handlePadClick}
+            onPadDown={handlePadDown}
+            onParamSelect={selectPadParam}
+        />
+        <PlayControls />
+        <Slider
+            label={selParam}
+            value={sliderVal}
+            {colour}
+            onChange={setPadSliderValue}
+        />
     {/if}
-    <NoteSequencer colour={PAD_COLOUR} seq={padSeq} />
-    <PadCircle
-        voices={CHORDS.map(c => ({ id: c.id, label: c.label, colour: c.colour }))}
-        params={[...PAD_PARAMS]}
-        selectedVoice={selChord}
-        selectedParam={selParam}
-        triggeredVoices={triggered}
-        onPadClick={handlePadClick}
-        onPadDown={handlePadDown}
-        onParamSelect={selectPadParam}
-    />
-    <PlayControls />
-    <Slider
-        label={selParam}
-        value={sliderVal}
-        {colour}
-        onChange={setPadSliderValue}
-    />
 </div>
 
 <style>

@@ -24,6 +24,24 @@ export const ACID_PARAM_MAP: Record<AcidParamName, { id: number; min: number; ma
 export const NUM_STEPS = 16;
 export const ACID_COLOUR = '#5DBE6E';
 
+import type { SettingsSection } from '../shared/types/settings';
+import { PARAM } from './audio/engine';
+
+export const ACID_SETTINGS: SettingsSection[] = [
+    {
+        label: 'TONE',
+        params: [
+            { name: 'DECAY',    id: PARAM.DECAY,    min: 0.03, max: 3, default: 0.3, type: 'slider' },
+            { name: 'ACCENT',   id: PARAM.ACCENT,   min: 0, max: 1, default: 0.5, type: 'slider' },
+            { name: 'WAVEFORM', id: PARAM.WAVEFORM,  min: 0, max: 1, default: 0, type: 'select',
+              options: [
+                  { value: 0, label: 'SAW' }, { value: 1, label: 'SQR' },
+              ],
+            },
+        ],
+    },
+];
+
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 export function midiNoteName(note: number): string {
     return `${NOTE_NAMES[note % 12]}${Math.floor(note / 12) - 1}`;

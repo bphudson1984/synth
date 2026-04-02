@@ -1,9 +1,10 @@
 <script lang="ts">
     import { get, writable } from 'svelte/store';
-    import { NOTE_PADS, ACID_PARAMS, ACID_COLOUR } from './constants';
+    import { NOTE_PADS, ACID_PARAMS, ACID_COLOUR, ACID_SETTINGS } from './constants';
     import { PRESETS } from './presets';
     import {
         selectedParam, sliderValue, currentPresetIndex, currentTranspose,
+        settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         selectAcidParam, setSliderValue,
         loadPreset, randomizePattern, transposePattern,
     } from './stores/state';
@@ -12,11 +13,14 @@
     import PlayControls from '../shared/components/PlayControls.svelte';
     import AcidSequencer from './AcidSequencer.svelte';
     import AcidTransport from './AcidTransport.svelte';
+    import SynthSettings from '../shared/components/SynthSettings.svelte';
 
     $: selParam = $selectedParam;
     $: sliderVal = $sliderValue;
     $: presetIdx = $currentPresetIndex;
     $: transpose = $currentTranspose;
+    $: showSettings = $settingsOpen;
+    $: settingsVals = $settingsValues;
 
     // Highlight the pad matching the current transposition
     $: activePadIndex = NOTE_PADS.findIndex(p => p.semitones === transpose);
@@ -44,21 +48,31 @@
             {/each}
         </select>
         <button class="rnd-btn" onclick={randomizePattern}>RND</button>
+        <button class="rnd-btn" class:active={showSettings} onclick={toggleSettings}>SETTINGS</button>
     </div>
-    <AcidSequencer />
-    <AcidTransport />
-    <PadCircle
-        voices={NOTE_PADS.map(p => ({ id: p.id, label: p.label, colour: p.colour }))}
-        params={[...ACID_PARAMS]}
-        selectedVoice={activePadIndex}
-        selectedParam={selParam}
-        triggeredVoices={triggered}
-        onPadClick={handlePadClick}
-        onPadDown={handlePadDown}
-        onParamSelect={selectAcidParam}
-    />
-    <PlayControls />
-    <Slider label={selParam} value={sliderVal} colour={ACID_COLOUR} onChange={setSliderValue} />
+    {#if showSettings}
+        <SynthSettings
+            sections={ACID_SETTINGS}
+            colour={ACID_COLOUR}
+            values={settingsVals}
+            onParamChange={setSettingsParam}
+        />
+    {:else}
+        <AcidSequencer />
+        <AcidTransport />
+        <PadCircle
+            voices={NOTE_PADS.map(p => ({ id: p.id, label: p.label, colour: p.colour }))}
+            params={[...ACID_PARAMS]}
+            selectedVoice={activePadIndex}
+            selectedParam={selParam}
+            triggeredVoices={triggered}
+            onPadClick={handlePadClick}
+            onPadDown={handlePadDown}
+            onParamSelect={selectAcidParam}
+        />
+        <PlayControls />
+        <Slider label={selParam} value={sliderVal} colour={ACID_COLOUR} onChange={setSliderValue} />
+    {/if}
 </div>
 
 <style>
@@ -69,4 +83,5 @@
     .preset-select option { background: var(--orbit-surface, #111); color: var(--orbit-ink, #eee); }
     .rnd-btn { padding: 6px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; letter-spacing: 1px; background: transparent; color: var(--orbit-hint, #666); border: 1.5px solid var(--orbit-border, #444); border-radius: 12px; cursor: pointer; transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1); }
     .rnd-btn:active { background: var(--orbit-ink, #eee); color: var(--orbit-surface, #111); }
+    .rnd-btn.active { background: var(--orbit-ink, #eee); color: var(--orbit-surface, #111); border-color: var(--orbit-ink, #eee); }
 </style>

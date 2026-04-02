@@ -44,3 +44,53 @@ export const NUM_STEPS = 16;
 
 export type ArpMode = 'off' | 'up' | 'down' | 'updown' | 'random';
 export type ArpDivision = '1/4' | '1/8' | '1/16' | '1/32';
+
+import type { SettingsSection } from '../shared/types/settings';
+import { PARAM } from './audio/engine';
+
+export const LEAD_SETTINGS: SettingsSection[] = [
+    {
+        label: 'FILTER',
+        params: [
+            { name: 'RES',     id: PARAM.FILTER_RESONANCE, min: 0, max: 1, default: 0, type: 'slider' },
+            { name: 'ENV AMT', id: PARAM.FILTER_ENV_AMT,   min: 0, max: 1, default: 0, type: 'slider' },
+        ],
+    },
+    {
+        label: 'FILT ENV',
+        params: [
+            { name: 'ATTACK',  id: PARAM.FILT_ATTACK,  min: 0.005, max: 2, default: 0.01, type: 'slider' },
+            { name: 'DECAY',   id: PARAM.FILT_DECAY,   min: 0.01, max: 3, default: 0.3, type: 'slider' },
+            { name: 'SUSTAIN', id: PARAM.FILT_SUSTAIN,  min: 0, max: 1, default: 0, type: 'slider' },
+            { name: 'RELEASE', id: PARAM.FILT_RELEASE,  min: 0.01, max: 3, default: 0.5, type: 'slider' },
+        ],
+    },
+    {
+        label: 'AMP ENV',
+        params: [
+            { name: 'ATTACK',  id: PARAM.AMP_ATTACK,   min: 0.005, max: 2, default: 0.01, type: 'slider' },
+            { name: 'DECAY',   id: PARAM.AMP_DECAY,    min: 0.01, max: 3, default: 0.3, type: 'slider' },
+            { name: 'SUSTAIN', id: PARAM.AMP_SUSTAIN,   min: 0, max: 1, default: 0.8, type: 'slider' },
+        ],
+    },
+    {
+        label: 'LFO',
+        params: [
+            { name: 'RATE',   id: PARAM.LFO_RATE,    min: 0, max: 20, default: 0, type: 'slider' },
+            { name: 'AMOUNT', id: PARAM.LFO_AMOUNT,   min: 0, max: 1, default: 0, type: 'slider' },
+            { name: 'DEST',   id: PARAM.LFO_DEST,     min: 0, max: 4, default: 0, type: 'select',
+              options: [
+                  { value: 0, label: 'OFF' }, { value: 1, label: 'TIMBRE' },
+                  { value: 2, label: 'COLOR' }, { value: 3, label: 'CUTOFF' },
+                  { value: 4, label: 'PITCH' },
+              ],
+            },
+        ],
+    },
+    {
+        label: 'MASTER',
+        params: [
+            { name: 'GLIDE', id: PARAM.GLIDE_TIME, min: 0, max: 1, default: 0, type: 'slider' },
+        ],
+    },
+];

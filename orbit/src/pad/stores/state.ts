@@ -1,5 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
-import { CHORDS, PAD_PARAMS, PAD_PARAM_MAP, type PadParamName } from '../constants';
+import { CHORDS, PAD_PARAMS, PAD_PARAM_MAP, PAD_SETTINGS, type PadParamName } from '../constants';
 import type { ProphetEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import { PRESETS, type Preset } from '../presets';
@@ -136,6 +136,31 @@ export function toggleArp() {
     }
 }
 
+// --- Settings ---
+export const settingsOpen = writable(false);
+
+// Build initial values from defaults
+function buildSettingsDefaults(): Record<number, number> {
+    const vals: Record<number, number> = {};
+    for (const section of PAD_SETTINGS) {
+        for (const p of section.params) {
+            vals[p.id] = p.default;
+        }
+    }
+    return vals;
+}
+
+export const settingsValues = writable<Record<number, number>>(buildSettingsDefaults());
+
+export function toggleSettings() {
+    settingsOpen.update(v => !v);
+}
+
+export function setSettingsParam(id: number, value: number) {
+    settingsValues.update(v => { v[id] = value; return { ...v }; });
+    engine?.setParam(id, value);
+}
+
 export function loadPreset(index: number) {
     const preset = PRESETS[index];
     if (!preset || !engine) return;
@@ -143,6 +168,13 @@ export function loadPreset(index: number) {
     for (const [id, value] of preset.params) {
         engine.setParam(id, value);
     }
+    // Update settings values to reflect preset
+    settingsValues.update(v => {
+        for (const [id, value] of preset.params) {
+            if (id in v) v[id] = value;
+        }
+        return { ...v };
+    });
     // Update slider values to reflect new preset's mapped params
     padParams.update(p => {
         for (const paramName of PAD_PARAMS) {

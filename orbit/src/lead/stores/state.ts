@@ -2,7 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import type { BraidsEngine } from '../audio/engine';
 import { PARAM } from '../audio/engine';
 import {
-    MODELS, LEAD_PARAMS, LEAD_PARAM_MAP, SCALE_NOTES, SCALE_CHORDS,
+    MODELS, LEAD_PARAMS, LEAD_PARAM_MAP, LEAD_SETTINGS, SCALE_NOTES, SCALE_CHORDS,
     NUM_STEPS, type LeadParamName, type PadMode, type ArpMode, type ArpDivision,
 } from '../constants';
 import { LEAD_PRESETS } from '../presets';
@@ -91,6 +91,30 @@ export function setSliderValue(value: number) {
     synthParams.update(p => { p[param] = value; return p; });
     const m = LEAD_PARAM_MAP[param];
     engine?.setParam(m.id, m.min + (value / 100) * (m.max - m.min));
+}
+
+// --- Settings ---
+export const settingsOpen = writable(false);
+
+function buildSettingsDefaults(): Record<number, number> {
+    const vals: Record<number, number> = {};
+    for (const section of LEAD_SETTINGS) {
+        for (const p of section.params) {
+            vals[p.id] = p.default;
+        }
+    }
+    return vals;
+}
+
+export const settingsValues = writable<Record<number, number>>(buildSettingsDefaults());
+
+export function toggleSettings() {
+    settingsOpen.update(v => !v);
+}
+
+export function setSettingsParam(id: number, value: number) {
+    settingsValues.update(v => { v[id] = value; return { ...v }; });
+    engine?.setParam(id, value);
 }
 
 // --- Latch ---

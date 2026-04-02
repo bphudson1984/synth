@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { SCALE_NOTES, SCALE_CHORDS, LEAD_PARAMS, LEAD_COLOUR, MODELS } from './constants';
+    import { SCALE_NOTES, SCALE_CHORDS, LEAD_PARAMS, LEAD_COLOUR, LEAD_SETTINGS, MODELS } from './constants';
     import {
         selectedModel, selectedParam, sliderValue, triggeredNotes, padMode, latchEnabled,
         currentLeadPreset, leadSeq,
         arpSettingsOpen, seqSettingsOpen, stepSettingsOpen,
+        settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         selectModel, selectLeadParam, setSliderValue, triggerPad,
         togglePadMode, toggleLatch, setSeqStepFromPad,
         loadLeadPreset, toggleArpSettings, toggleSeqSettings, toggleStepSettings,
@@ -19,6 +20,7 @@
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
     import ArpSettings from './ArpSettings.svelte';
+    import SynthSettings from '../shared/components/SynthSettings.svelte';
 
     $: model = $selectedModel;
     $: selParam = $selectedParam;
@@ -30,6 +32,8 @@
     $: arpOpen = $arpSettingsOpen;
     $: seqOpen = $seqSettingsOpen;
     $: stepOpen = $stepSettingsOpen;
+    $: showSettings = $settingsOpen;
+    $: settingsVals = $settingsValues;
     $: anyDrawerOpen = arpOpen || seqOpen || stepOpen;
 
     function handlePresetChange(e: Event) {
@@ -102,38 +106,48 @@
         <button class="bar-btn" class:active={arpOpen} onclick={toggleArpSettings}>ARP</button>
         <button class="bar-btn" class:active={seqOpen} onclick={toggleSeqSettings}>SEQ</button>
         <button class="bar-btn" class:active={stepOpen} onclick={toggleStepSettings}>STEP</button>
+        <button class="bar-btn" class:active={showSettings} onclick={toggleSettings}>SETTINGS</button>
     </div>
-    {#if arpOpen}
-        <div class="drawer-row"><ArpSettings /></div>
-    {:else if seqOpen}
-        <div class="drawer-row"><SeqSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
-    {:else if stepOpen}
-        <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+    {#if showSettings}
+        <SynthSettings
+            sections={LEAD_SETTINGS}
+            colour={LEAD_COLOUR}
+            values={settingsVals}
+            onParamChange={setSettingsParam}
+        />
+    {:else}
+        {#if arpOpen}
+            <div class="drawer-row"><ArpSettings /></div>
+        {:else if seqOpen}
+            <div class="drawer-row"><SeqSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+        {:else if stepOpen}
+            <div class="drawer-row"><StepSettingsRow colour={LEAD_COLOUR} seq={leadSeq} /></div>
+        {/if}
+        <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
+        <PadCircle
+            voices={pads}
+            params={[...LEAD_PARAMS]}
+            selectedVoice={-1}
+            selectedParam={selParam}
+            triggeredVoices={triggered}
+            onPadClick={handlePadClick}
+            onPadDown={handlePadDown}
+            onParamSelect={selectLeadParam}
+        />
+        <div class="pad-controls">
+            <button class="pill-btn" class:active={mode === 'chord'} onclick={togglePadMode}>
+                {mode === 'note' ? 'NOTE' : 'CHRD'}
+            </button>
+            <button class="pill-btn latch" class:active={latch} onclick={toggleLatch}>LATCH</button>
+        </div>
+        <PlayControls />
+        <Slider
+            label={selParam}
+            value={sliderVal}
+            colour={LEAD_COLOUR}
+            onChange={setSliderValue}
+        />
     {/if}
-    <NoteSequencer colour={LEAD_COLOUR} seq={leadSeq} />
-    <PadCircle
-        voices={pads}
-        params={[...LEAD_PARAMS]}
-        selectedVoice={-1}
-        selectedParam={selParam}
-        triggeredVoices={triggered}
-        onPadClick={handlePadClick}
-        onPadDown={handlePadDown}
-        onParamSelect={selectLeadParam}
-    />
-    <div class="pad-controls">
-        <button class="pill-btn" class:active={mode === 'chord'} onclick={togglePadMode}>
-            {mode === 'note' ? 'NOTE' : 'CHRD'}
-        </button>
-        <button class="pill-btn latch" class:active={latch} onclick={toggleLatch}>LATCH</button>
-    </div>
-    <PlayControls />
-    <Slider
-        label={selParam}
-        value={sliderVal}
-        colour={LEAD_COLOUR}
-        onChange={setSliderValue}
-    />
 </div>
 
 <style>
