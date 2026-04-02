@@ -139,6 +139,8 @@ createSynthProcessor('prophet-processor', melodicSeqHandler);
 
 createSynthProcessor('braids-processor', melodicSeqHandler);
 
+createSynthProcessor('volca-bass-processor', melodicSeqHandler);
+
 createSynthProcessor('tb303-processor', (wasm, data) => {
     switch (data.type) {
         case 'seq-set-step-note': wasm.seq_set_step_note(data.step, data.note); break;

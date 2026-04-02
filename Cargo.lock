@@ -2197,6 +2197,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
+name = "volca-bass-dsp"
+version = "0.1.0"
+dependencies = [
+ "audio-test-harness",
+ "dsp-common",
+]
+
+[[package]]
+name = "volca-bass-wasm"
+version = "0.1.0"
+dependencies = [
+ "dsp-common",
+ "volca-bass-dsp",
+]
+
+[[package]]
 name = "vst3-com"
 version = "0.1.0"
 source = "git+https://github.com/robbert-vdh/vst3-sys.git?branch=fix%2Fdrop-box-from-raw#b3ff4d775940f5b476b9d1cca02a90e07e1922a2"
