@@ -1,4 +1,4 @@
-import { getAudioContext, getLimiterNode } from './context';
+import { getAudioContext } from './context';
 
 /**
  * Base class for all WASM audio engines.
@@ -7,7 +7,6 @@ import { getAudioContext, getLimiterNode } from './context';
  */
 export abstract class BaseEngine {
     protected node: AudioWorkletNode | null = null;
-    protected gainNode: GainNode | null = null;
     protected panner: StereoPannerNode | null = null;
     protected _ready = false;
     get ready() { return this._ready; }
@@ -30,16 +29,11 @@ export abstract class BaseEngine {
             };
             this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes }, [wasmBytes]);
         });
-        // Chain: worklet → gain → panner → limiter → destination
-        this.gainNode = ctx.createGain();
         this.panner = ctx.createStereoPanner();
-        this.node.connect(this.gainNode);
-        this.gainNode.connect(this.panner);
-        const dest = getLimiterNode() ?? ctx.destination;
-        this.panner.connect(dest);
+        this.node.connect(this.panner);
+        this.panner.connect(ctx.destination);
     }
 
-    setVolume(value: number) { if (this.gainNode) this.gainNode.gain.value = value; }
     setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
 

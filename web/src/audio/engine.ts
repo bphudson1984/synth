@@ -6,7 +6,7 @@ export class AudioEngine {
     get ready() { return this._ready; }
 
     async init(): Promise<void> {
-        this.ctx = new AudioContext();
+        this.ctx = new AudioContext({ sampleRate: 48000 });
 
         // Fetch WASM bytes (ArrayBuffer is safely transferable to AudioWorklet,
         // unlike WebAssembly.Module which Chrome silently drops during postMessage)

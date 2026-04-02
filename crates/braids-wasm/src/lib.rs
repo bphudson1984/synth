@@ -2,8 +2,8 @@ use braids_dsp::engine::BraidsSynth;
 use dsp_common::note_sequencer::MAX_STEPS;
 
 static mut ENGINE: Option<BraidsSynth> = None;
-static mut LEFT_BUF: [f32; 512] = [0.0; 512];
-static mut RIGHT_BUF: [f32; 512] = [0.0; 512];
+static mut LEFT_BUF: [f32; 256] = [0.0; 256];
+static mut RIGHT_BUF: [f32; 256] = [0.0; 256];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -14,9 +14,9 @@ pub extern "C" fn init(sample_rate: f32) {
 pub extern "C" fn process(num_samples: u32) {
     unsafe {
         let e = match ENGINE.as_mut() { Some(e) => e, None => return };
-        let n = (num_samples as usize).min(512);
+        let n = (num_samples as usize).min(256);
         for i in 0..n {
-            let mono = e.process().clamp(-1.0, 1.0);
+            let mono = e.process();
             LEFT_BUF[i] = mono;
             RIGHT_BUF[i] = mono;
         }
