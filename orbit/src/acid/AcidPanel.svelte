@@ -23,11 +23,13 @@
     const triggeredPad = writable(new Set<number>());
     $: triggered = $triggeredPad;
 
-    function handlePadClick(i: number) {
+    function handlePadDown(i: number) {
         transposePattern(NOTE_PADS[i].semitones);
         triggeredPad.set(new Set([i]));
         setTimeout(() => { triggeredPad.set(new Set()); }, 120);
     }
+
+    function handlePadClick(_i: number, _durationMs: number) {}
 
     function handlePresetChange(e: Event) {
         loadPreset(Number((e.target as HTMLSelectElement).value));
@@ -52,6 +54,7 @@
         selectedParam={selParam}
         triggeredVoices={triggered}
         onPadClick={handlePadClick}
+        onPadDown={handlePadDown}
         onParamSelect={selectAcidParam}
     />
     <PlayControls />

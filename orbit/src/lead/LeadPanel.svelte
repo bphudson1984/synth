@@ -10,7 +10,8 @@
     } from './stores/state';
     import { LEAD_PRESETS } from './presets';
     import { get } from 'svelte/store';
-    import { isPlaying, isRecording } from '../shared/stores/transport';
+    import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
+    import { seqTimeDivision } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
     import PlayControls from '../shared/components/PlayControls.svelte';
@@ -43,24 +44,45 @@
         selectModel(Number((e.target as HTMLSelectElement).value));
     }
 
-    function handlePadClick(i: number) {
+    let pressStartStep = -1;
+
+    function handlePadDown(i: number) {
         triggerPad(i);
 
-        if (!get(isRecording)) return; // record off: just play sound
+        if (!get(isRecording)) return;
 
+        // Record the note immediately at the current step
         if (get(isPlaying)) {
-            // Real-time record: write to the step the playhead is on
-            setSeqStepFromPad(i, get(leadSeq.seqCurrentStep));
+            pressStartStep = get(leadSeq.seqCurrentStep);
         } else {
-            // Step-entry: write to selected step, advance
-            setSeqStepFromPad(i);
-            const cur = get(leadSeq.seqSelectedStep);
+            pressStartStep = get(leadSeq.seqSelectedStep);
+        }
+        setSeqStepFromPad(i, pressStartStep);
+    }
+
+    function handlePadClick(_i: number, durationMs: number) {
+        if (!get(isRecording) || pressStartStep < 0) { pressStartStep = -1; return; }
+
+        // Calculate gate as percentage of step duration — can exceed 100 to sustain across steps
+        const stepMs = 60000 / get(bpm) / Math.pow(2, get(seqTimeDivision));
+        const gatePct = Math.max(5, Math.round(durationMs / stepMs * 100));
+
+        // Update the gate length on the step that was recorded on press
+        leadSeq.setStepGatePctAt(pressStartStep, gatePct);
+
+        // Advance cursor past the sustained steps (step-entry mode)
+        if (!get(isPlaying)) {
+            const totalSteps = Math.max(1, Math.ceil(gatePct / 100));
+            const numSteps = get(leadSeq.seqSteps).length;
+            const endStep = (pressStartStep + totalSteps) % numSteps;
             const page = get(leadSeq.seqCurrentPage);
             const pageStart = page * 16;
             const pageEnd = pageStart + 15;
-            if (cur < pageEnd) { leadSeq.selectSeqStep(cur + 1); }
-            else { leadSeq.selectSeqStep(pageStart); }
+            const next = endStep > pageEnd ? pageStart : endStep;
+            leadSeq.selectSeqStep(next);
         }
+
+        pressStartStep = -1;
     }
 </script>
 
@@ -96,6 +118,7 @@
         selectedParam={selParam}
         triggeredVoices={triggered}
         onPadClick={handlePadClick}
+        onPadDown={handlePadDown}
         onParamSelect={selectLeadParam}
     />
     <div class="pad-controls">

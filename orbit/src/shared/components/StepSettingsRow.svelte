@@ -4,11 +4,13 @@
     export let colour: string;
     export let seq: NoteSequencerStore;
 
-    $: ({ seqSteps: stepsStore, seqSelectedStep: selStore } = seq);
+    $: ({ seqSteps: stepsStore, seqSelectedStep: selStore, lenMode: lenModeStore } = seq);
     $: sel = $selStore;
     $: steps = $stepsStore;
     $: step = steps[sel];
     $: hasStep = step?.gate;
+    $: inLenMode = $lenModeStore;
+    $: lenSteps = hasStep ? Math.max(1, Math.round(step.gatePct / 100)) : 1;
 </script>
 
 {#if hasStep}
@@ -19,12 +21,7 @@
     />
     <span class="val" style="color: {colour}">{step.velocity}</span>
     <span class="sep"></span>
-    <span class="lbl">GATE</span>
-    <input type="range" min="5" max="100" step="1" value={step.gatePct}
-        oninput={(e) => seq.setStepGatePct(Number((e.target as HTMLInputElement).value))}
-        class="inline-slider" style="--c: {colour}; --fill-pct: {step.gatePct}%"
-    />
-    <span class="val" style="color: {colour}">{step.gatePct}%</span>
+    <button class="btn len-btn" class:active={inLenMode} onclick={seq.toggleLenMode} style="--c: {colour}">LEN {lenSteps}</button>
     <span class="sep"></span>
     <span class="lbl">PROB</span>
     <input type="range" min="0" max="100" step="1" value={step.probability}
@@ -47,6 +44,8 @@
     .lbl { font-size: 9px; font-weight: 500; letter-spacing: 1px; color: var(--orbit-hint, #666); }
     .btn { padding: 3px 8px; font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 500; background: transparent; color: var(--orbit-hint, #666); border: 1px solid var(--orbit-border, #444); border-radius: 8px; cursor: pointer; transition: all 100ms; }
     .btn.active { background: var(--c); color: #fff; border-color: var(--c); }
+    .btn.len-btn.active { background: var(--c); color: #fff; border-color: var(--c); animation: pulse-len 800ms infinite alternate; }
+    @keyframes pulse-len { from { opacity: 1; } to { opacity: 0.6; } }
     .btn.skip.active { background: #D84040; color: #fff; border-color: #D84040; }
     .sep { width: 1px; height: 16px; background: var(--orbit-border, #333); }
     .inline-slider { width: 50px; height: 3px; -webkit-appearance: none; appearance: none; background: linear-gradient(to right, var(--c) 0%, var(--c) var(--fill-pct), var(--orbit-border) var(--fill-pct)); border-radius: 2px; outline: none; }

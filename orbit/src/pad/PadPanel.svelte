@@ -6,7 +6,7 @@
         currentPresetIndex, arpEnabled, padSeq,
         selectChord, selectPadParam, triggerChord, setPadSliderValue, loadPreset, toggleArp,
     } from './stores/state';
-    import { isPlaying, isRecording } from '../shared/stores/transport';
+    import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
     import { get } from 'svelte/store';
     import PadCircle from '../shared/components/PadCircle.svelte';
     import Slider from '../shared/components/Slider.svelte';
@@ -29,26 +29,45 @@
     $: seqOpen = $seqOpenStore;
     $: stepOpen = $stepOpenStore;
 
-    function handlePadClick(i: number) {
+    let pressStartStep = -1;
+
+    function handlePadDown(i: number) {
         selectChord(i);
         triggerChord(i);
 
-        if (!get(isRecording)) return; // record off: just play sound
+        if (!get(isRecording)) return;
 
         const chord = CHORDS[i];
         if (get(isPlaying)) {
-            // Real-time record: write to the step the playhead is on
-            padSeq.setStepFromNotes(get(padSeq.seqCurrentStep), [...chord.notes], chord.label);
+            pressStartStep = get(padSeq.seqCurrentStep);
+            padSeq.setStepFromNotes(pressStartStep, [...chord.notes], chord.label);
         } else {
-            // Step-entry: write to selected step, advance
+            pressStartStep = get(padSeq.seqSelectedStep);
             padSeq.setSeqStepFromNotes([...chord.notes], chord.label);
-            const cur = get(padSeq.seqSelectedStep);
+        }
+    }
+
+    function handlePadClick(_i: number, durationMs: number) {
+        if (!get(isRecording) || pressStartStep < 0) { pressStartStep = -1; return; }
+
+        const div = get(padSeq.seqTimeDivision);
+        const stepMs = 60000 / get(bpm) / Math.pow(2, div);
+        const gatePct = Math.max(5, Math.round(durationMs / stepMs * 100));
+
+        padSeq.setStepGatePctAt(pressStartStep, gatePct);
+
+        if (!get(isPlaying)) {
+            const totalSteps = Math.max(1, Math.ceil(gatePct / 100));
+            const numSteps = get(padSeq.seqSteps).length;
+            const endStep = (pressStartStep + totalSteps) % numSteps;
             const page = get(padSeq.seqCurrentPage);
             const pageStart = page * 16;
             const pageEnd = pageStart + 15;
-            if (cur < pageEnd) { padSeq.selectSeqStep(cur + 1); }
-            else { padSeq.selectSeqStep(pageStart); }
+            const next = endStep > pageEnd ? pageStart : endStep;
+            padSeq.selectSeqStep(next);
         }
+
+        pressStartStep = -1;
     }
 
     function handlePresetChange(e: Event) {
@@ -80,6 +99,7 @@
         selectedParam={selParam}
         triggeredVoices={triggered}
         onPadClick={handlePadClick}
+        onPadDown={handlePadDown}
         onParamSelect={selectPadParam}
     />
     <PlayControls />

@@ -12,6 +12,7 @@
         selectedParam,
         triggeredVoices,
         onPadClick,
+        onPadDown = undefined,
         onPadDblClick = undefined,
         onParamSelect,
         badge = undefined,
@@ -21,11 +22,27 @@
         selectedVoice: number;
         selectedParam: string;
         triggeredVoices: Set<number>;
-        onPadClick: (index: number) => void;
+        onPadClick: (index: number, durationMs: number) => void;
+        onPadDown?: (index: number) => void;
         onPadDblClick?: (index: number) => void;
         onParamSelect: (param: string) => void;
         badge?: (index: number) => string | null;
     } = $props();
+
+    const padDownTimes = new Map<number, number>();
+
+    function handlePointerDown(e: PointerEvent, index: number) {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        padDownTimes.set(index, performance.now());
+        onPadDown?.(index);
+    }
+
+    function handlePointerUp(e: PointerEvent, index: number) {
+        const downTime = padDownTimes.get(index);
+        padDownTimes.delete(index);
+        const durationMs = downTime != null ? performance.now() - downTime : 0;
+        onPadClick(index, durationMs);
+    }
 
     const ORBIT_R = 120;
     const DIAMOND_R = 48;
@@ -75,7 +92,8 @@
                     {isSelected ? `box-shadow: 0 0 16px ${voice.colour}59;` : ''}
                     {isTriggered ? `box-shadow: 0 0 20px ${voice.colour}80; transform: scale(1.05);` : ''}
                 "
-                onclick={() => onPadClick(i)}
+                onpointerdown={(e) => handlePointerDown(e, i)}
+                onpointerup={(e) => handlePointerUp(e, i)}
                 ondblclick={(e) => handlePadDblClick(e, i)}
                 aria-label={voice.label}
             >

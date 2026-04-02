@@ -25,10 +25,12 @@
         loadDrumPreset(Number((e.target as HTMLSelectElement).value));
     }
 
-    function handlePadClick(i: number) {
+    function handlePadDown(i: number) {
         selectVoice(i);
         triggerPad(i);
     }
+
+    function handlePadClick(_i: number, _durationMs: number) {}
 
     function badge(i: number): string | null {
         const eng = padEngines[i] ?? '808';
@@ -54,6 +56,7 @@
     selectedParam={selParam}
     triggeredVoices={triggered}
     onPadClick={handlePadClick}
+    onPadDown={handlePadDown}
     onPadDblClick={togglePadEngine}
     onParamSelect={selectParam}
     {badge}

@@ -46,6 +46,7 @@ export function createNoteSequencerStore() {
     const seqTimeDivision = writable(2);
     const seqSettingsOpen = writable(false);
     const stepSettingsOpen = writable(false);
+    const lenMode = writable(false);
 
     function connectEngine(e: SeqEngine) {
         engine = e;
@@ -110,8 +111,12 @@ export function createNoteSequencerStore() {
         });
         engine?.setStepGate(fromIdx, false);
         const steps = get(seqSteps);
-        if (steps[toIdx].gate) { engine?.setStepNotes(toIdx, steps[toIdx].notes); }
-        else { engine?.setStepGate(toIdx, false); }
+        if (steps[toIdx].gate) {
+            engine?.setStepNotes(toIdx, steps[toIdx].notes);
+            engine?.setStepGatePct(toIdx, steps[toIdx].gatePct);
+        } else {
+            engine?.setStepGate(toIdx, false);
+        }
     }
 
     function clearSequence() {
@@ -137,6 +142,10 @@ export function createNoteSequencerStore() {
     }
     function setStepGatePct(val: number) {
         const step = get(seqSelectedStep);
+        seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
+        engine?.setStepGatePct(step, val);
+    }
+    function setStepGatePctAt(step: number, val: number) {
         seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
         engine?.setStepGatePct(step, val);
     }
@@ -191,22 +200,37 @@ export function createNoteSequencerStore() {
     function toggleStepSettings() {
         stepSettingsOpen.update(v => { if (!v) seqSettingsOpen.set(false); return !v; });
     }
+    function toggleLenMode() { lenMode.update(v => !v); }
+
+    function setLenFromStep(endStep: number) {
+        const start = get(seqSelectedStep);
+        const step = get(seqSteps)[start];
+        if (!step?.gate || endStep === start) { lenMode.set(false); return; }
+        const len = endStep > start ? endStep - start : (get(seqSteps).length - start + endStep);
+        const gatePct = Math.max(100, len * 100);
+        seqSteps.update(s => { s[start].gatePct = gatePct; return [...s]; });
+        engine?.setStepGatePct(start, gatePct);
+        lenMode.set(false);
+    }
+
     function closeAllDrawers() {
         seqSettingsOpen.set(false);
         stepSettingsOpen.set(false);
+        lenMode.set(false);
     }
 
     return {
         // Stores
         seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
-        seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen,
+        seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode,
         // Connection
         connectEngine, connectOnStep,
         // Actions
         addSeqPage, setSeqPage, selectSeqStep, setSeqStepFromNotes, setStepFromNotes,
         toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
-        setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
+        setStepVelocity, setStepGatePct, setStepGatePctAt, setStepProbability, setStepRatchet, toggleStepSkip,
         setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
+        toggleLenMode, setLenFromStep,
         toggleSeqSettings, toggleStepSettings, closeAllDrawers,
     };
 }

@@ -111,9 +111,6 @@ export function triggerPad(padIndex: number) {
     triggeredNotes.update(s => { s.add(padIndex); return new Set(s); });
     setTimeout(() => { triggeredNotes.update(s => { s.delete(padIndex); return new Set(s); }); }, 150);
 
-    // When playing and not recording, pads only trigger visual — don't play
-    if (get(isPlaying) && !get(isRecording)) return;
-
     const mode = get(padMode);
     let notes: number[];
     if (mode === 'chord') {
@@ -179,7 +176,7 @@ export function setSeqPage(page: number) {
     seqCurrentPage.set(Math.max(0, Math.min(page, pages - 1)));
 }
 
-export function setSeqStepFromPad(padIndex: number, targetStep?: number) {
+export function setSeqStepFromPad(padIndex: number, targetStep?: number, gatePct?: number) {
     const step = targetStep ?? get(seqSelectedStep);
     const mode = get(padMode);
     let notes: number[];
@@ -193,8 +190,10 @@ export function setSeqStepFromPad(padIndex: number, targetStep?: number) {
         notes = [n.note];
         label = n.label;
     }
-    seqSteps.update(s => { s[step] = { notes, gate: true, label }; return [...s]; });
+    const gp = gatePct ?? 75;
+    seqSteps.update(s => { s[step] = { ...s[step], notes, gate: true, label, gatePct: gp }; return [...s]; });
     engine?.setStepNotes(step, notes);
+    engine?.setStepGatePct(step, gp);
 }
 
 export function toggleSeqStepGate(step: number) {
@@ -216,6 +215,19 @@ export const seqSwing = writable(0);      // 0-100
 export const seqTimeDivision = writable(2); // 0=1/4, 1=1/8, 2=1/16, 3=1/32
 export const seqSettingsOpen = writable(false);
 export const stepSettingsOpen = writable(false);
+export const lenMode = writable(false);
+
+export function toggleLenMode() { lenMode.update(v => !v); }
+export function setLenFromStep(endStep: number) {
+    const start = get(seqSelectedStep);
+    const step = get(seqSteps)[start];
+    if (!step?.gate || endStep === start) { lenMode.set(false); return; }
+    const len = endStep > start ? endStep - start : (get(seqSteps).length - start + endStep);
+    const gatePct = Math.max(100, len * 100);
+    seqSteps.update(s => { s[start].gatePct = gatePct; return [...s]; });
+    engine?.setStepGatePct(start, gatePct);
+    lenMode.set(false);
+}
 
 export function toggleSeqSettings() {
     seqSettingsOpen.update(v => { if (!v) { stepSettingsOpen.set(false); arpSettingsOpen.set(false); } return !v; });
@@ -259,6 +271,10 @@ export function setStepVelocity(val: number) {
 }
 export function setStepGatePct(val: number) {
     const step = get(seqSelectedStep);
+    seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
+    engine?.setStepGatePct(step, val);
+}
+export function setStepGatePctAt(step: number, val: number) {
     seqSteps.update(s => { s[step].gatePct = val; return [...s]; });
     engine?.setStepGatePct(step, val);
 }
@@ -342,6 +358,7 @@ export function moveStep(fromIdx: number, toIdx: number) {
     engine?.setStepGate(fromIdx, false);
     if (steps[toIdx].gate) {
         engine?.setStepNotes(toIdx, steps[toIdx].notes);
+        engine?.setStepGatePct(toIdx, steps[toIdx].gatePct);
     } else {
         engine?.setStepGate(toIdx, false);
     }
@@ -499,7 +516,7 @@ function arpTick() {
 // --- Adapter: bundle sequencer stores for shared NoteSequencer components ---
 export const leadSeq: NoteSequencerStore = {
     seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
-    seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen,
+    seqDirection, seqSwing, seqTimeDivision, seqSettingsOpen, stepSettingsOpen, lenMode,
     connectEngine: () => {}, connectOnStep: () => {},
     addSeqPage, setSeqPage, selectSeqStep,
     setSeqStepFromNotes: (notes: number[], label: string) => {
@@ -508,8 +525,9 @@ export const leadSeq: NoteSequencerStore = {
         engine?.setStepNotes(step, notes);
     },
     toggleSeqStepGate, removeStepGate, moveStep, clearSequence, clearSelectedStep,
-    setStepVelocity, setStepGatePct, setStepProbability, setStepRatchet, toggleStepSkip,
+    setStepVelocity, setStepGatePct, setStepGatePctAt, setStepProbability, setStepRatchet, toggleStepSkip,
     setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
+    toggleLenMode, setLenFromStep,
     toggleSeqSettings, toggleStepSettings,
-    closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); arpSettingsOpen.set(false); },
+    closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); lenMode.set(false); arpSettingsOpen.set(false); },
 };
