@@ -15,27 +15,43 @@ pub struct Envelope {
     sustain: f32, // 0.0 to 1.0
     release: f32,
     sample_rate: f32,
+    // Cached coefficients — avoid exp() per sample
+    attack_coeff: f32,
+    decay_coeff: f32,
+    release_coeff: f32,
+}
+
+fn rc_coeff(secs: f32, sample_rate: f32) -> f32 {
+    (-1.0 / (secs * sample_rate)).exp()
 }
 
 impl Envelope {
     pub fn new(sample_rate: f32) -> Self {
+        let attack = 0.01f32;
+        let decay = 0.1f32;
+        let release = 0.1f32;
         Self {
             stage: Stage::Idle,
             value: 0.0,
-            attack: 0.01,
-            decay: 0.1,
+            attack,
+            decay,
             sustain: 0.5,
-            release: 0.1,
+            release,
             sample_rate,
+            attack_coeff: rc_coeff(attack, sample_rate),
+            decay_coeff: rc_coeff(decay, sample_rate),
+            release_coeff: rc_coeff(release, sample_rate),
         }
     }
 
     pub fn set_attack(&mut self, secs: f32) {
         self.attack = secs.max(0.0005);
+        self.attack_coeff = rc_coeff(self.attack, self.sample_rate);
     }
 
     pub fn set_decay(&mut self, secs: f32) {
         self.decay = secs.max(0.0005);
+        self.decay_coeff = rc_coeff(self.decay, self.sample_rate);
     }
 
     pub fn set_sustain(&mut self, level: f32) {
@@ -44,6 +60,7 @@ impl Envelope {
 
     pub fn set_release(&mut self, secs: f32) {
         self.release = secs.max(0.0005);
+        self.release_coeff = rc_coeff(self.release, self.sample_rate);
     }
 
     pub fn gate_on(&mut self) {
@@ -63,16 +80,14 @@ impl Envelope {
             Stage::Attack => {
                 // CEM3310-style: RC charge toward 1.5 (overshoot target)
                 // This creates the characteristic exponential curve
-                let coeff = (-1.0 / (self.attack * self.sample_rate)).exp();
-                self.value = 1.5 + (self.value - 1.5) * coeff;
+                self.value = 1.5 + (self.value - 1.5) * self.attack_coeff;
                 if self.value >= 1.0 {
                     self.value = 1.0;
                     self.stage = Stage::Decay;
                 }
             }
             Stage::Decay => {
-                let coeff = (-1.0 / (self.decay * self.sample_rate)).exp();
-                self.value = self.sustain + (self.value - self.sustain) * coeff;
+                self.value = self.sustain + (self.value - self.sustain) * self.decay_coeff;
                 if (self.value - self.sustain).abs() < 0.0001 {
                     self.value = self.sustain;
                     self.stage = Stage::Sustain;
@@ -82,8 +97,7 @@ impl Envelope {
                 self.value = self.sustain;
             }
             Stage::Release => {
-                let coeff = (-1.0 / (self.release * self.sample_rate)).exp();
-                self.value *= coeff;
+                self.value *= self.release_coeff;
                 if self.value < 0.0001 {
                     self.value = 0.0;
                     self.stage = Stage::Idle;

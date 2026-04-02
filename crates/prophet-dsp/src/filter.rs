@@ -6,21 +6,43 @@ pub struct LadderFilter {
     resonance: f32,    // 0.0 to ~4.0
     drive: f32,        // 1.0 = clean, higher = more saturation
     sample_rate: f32,
+    // Cached coefficients — avoid tan() per sample
+    a: f32,
+    b: f32,
+    a2: f32,
+    a3: f32,
+    a4: f32,
 }
 
 impl LadderFilter {
     pub fn new(sample_rate: f32) -> Self {
-        Self {
+        let mut f = Self {
             s: [0.0; 4],
             cutoff_hz: 20000.0,
             resonance: 0.0,
             drive: 1.0,
             sample_rate,
-        }
+            a: 0.0, b: 0.0, a2: 0.0, a3: 0.0, a4: 0.0,
+        };
+        f.update_coeffs();
+        f
+    }
+
+    fn update_coeffs(&mut self) {
+        let g = (PI * self.cutoff_hz / self.sample_rate).tan();
+        self.a = g / (1.0 + g);
+        self.b = 1.0 - self.a;
+        self.a2 = self.a * self.a;
+        self.a3 = self.a2 * self.a;
+        self.a4 = self.a3 * self.a;
     }
 
     pub fn set_cutoff(&mut self, hz: f32) {
-        self.cutoff_hz = hz.clamp(20.0, self.sample_rate * 0.45);
+        let new_hz = hz.clamp(20.0, self.sample_rate * 0.45);
+        if new_hz != self.cutoff_hz {
+            self.cutoff_hz = new_hz;
+            self.update_coeffs();
+        }
     }
 
     pub fn set_resonance(&mut self, r: f32) {
@@ -32,21 +54,11 @@ impl LadderFilter {
     }
 
     pub fn process(&mut self, input: f32) -> f32 {
-        // Zavalishin TPT ladder filter
-        // g = tan(pi * cutoff / sample_rate) — the integrator gain
-        let g = (PI * self.cutoff_hz / self.sample_rate).tan();
-        let a = g / (1.0 + g); // TPT 1-pole gain coefficient
-        let b = 1.0 - a;       // state-to-output coefficient
+        let a = self.a;
+        let b = self.b;
 
-        // Estimate y4 from current state (linear estimate for feedback resolution)
-        // y_i = a * x_i + b * s_i  for each stage
-        // y4 = a^4 * u + b * (a^3*s0 + a^2*s1 + a*s2 + s3)
-        let a2 = a * a;
-        let a3 = a2 * a;
-        let a4 = a3 * a;
-
-        let s_estimate = b * (a3 * self.s[0] + a2 * self.s[1] + a * self.s[2] + self.s[3]);
-        let g_total = a4;
+        let s_estimate = b * (self.a3 * self.s[0] + self.a2 * self.s[1] + a * self.s[2] + self.s[3]);
+        let g_total = self.a4;
 
         // Solve: u = input - k * y4 = input - k * (g_total * u + s_estimate)
         let u = (input - self.resonance * s_estimate) / (1.0 + self.resonance * g_total);
