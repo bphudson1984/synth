@@ -42,10 +42,10 @@
     const useQuickSlots = !!onQuickSlotSelect;
 
     const CORNER_POSITIONS = [
-        { left: '4px', top: '4px' },
-        { right: '4px', top: '4px' },
-        { left: '4px', bottom: '4px' },
-        { right: '4px', bottom: '4px' },
+        { left: '4px', top: 'calc(50% - 32px)' },
+        { right: '4px', top: 'calc(50% - 32px)' },
+        { left: '4px', top: 'calc(50% + 4px)' },
+        { right: '4px', top: 'calc(50% + 4px)' },
     ];
 
     const padDownTimes = new Map<number, number>();
@@ -204,12 +204,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 280px;
+        min-height: 240px;
     }
     .orbit-area {
         position: relative;
         width: 360px;
-        height: 360px;
+        height: 320px;
     }
     .pad {
         position: absolute;
