@@ -111,9 +111,6 @@ export function triggerPad(padIndex: number) {
     triggeredNotes.update(s => { s.add(padIndex); return new Set(s); });
     setTimeout(() => { triggeredNotes.update(s => { s.delete(padIndex); return new Set(s); }); }, 150);
 
-    // When playing and not recording, pads only trigger visual — don't play
-    if (get(isPlaying) && !get(isRecording)) return;
-
     const mode = get(padMode);
     let notes: number[];
     if (mode === 'chord') {

@@ -73,7 +73,7 @@
         // Advance cursor past the sustained steps (step-entry mode)
         if (!get(isPlaying)) {
             const totalSteps = Math.max(1, Math.ceil(gatePct / 100));
-            const numSteps = get(seqSteps).length;
+            const numSteps = get(leadSeq.seqSteps).length;
             const endStep = (pressStartStep + totalSteps) % numSteps;
             const page = get(leadSeq.seqCurrentPage);
             const pageStart = page * 16;
