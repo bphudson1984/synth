@@ -8,14 +8,11 @@ terraform {
     }
   }
 
-  backend "local" {
-    # Switch to azurerm backend for shared state:
-    # backend "azurerm" {
-    #   resource_group_name  = "tfstate-rg"
-    #   storage_account_name = "tfstateprophet5"
-    #   container_name       = "tfstate"
-    #   key                  = "prophet5.tfstate"
-    # }
+  backend "azurerm" {
+    resource_group_name  = "tfstate-rg"
+    storage_account_name = "tfstateprophet5"
+    container_name       = "tfstate"
+    key                  = "prophet5.tfstate"
   }
 }
 
@@ -46,6 +43,20 @@ resource "azurerm_static_web_app" "prophet5" {
 }
 
 # ============================================================
+# Azure Static Web App — Dev Environment
+# ============================================================
+resource "azurerm_static_web_app" "orbit_dev" {
+  name                = "orbit-dev"
+  resource_group_name = azurerm_resource_group.prophet5.name
+  location            = var.location
+  sku_tier            = "Free"
+  sku_size            = "Free"
+  tags = merge(var.tags, {
+    environment = "dev"
+  })
+}
+
+# ============================================================
 # Outputs — needed by GitHub Actions
 # ============================================================
 output "static_web_app_name" {
@@ -63,4 +74,20 @@ output "static_web_app_api_key" {
 
 output "resource_group_name" {
   value = azurerm_resource_group.prophet5.name
+}
+
+# ============================================================
+# Dev environment outputs
+# ============================================================
+output "dev_static_web_app_name" {
+  value = azurerm_static_web_app.orbit_dev.name
+}
+
+output "dev_static_web_app_url" {
+  value = "https://${azurerm_static_web_app.orbit_dev.default_host_name}"
+}
+
+output "dev_static_web_app_api_key" {
+  value     = azurerm_static_web_app.orbit_dev.api_key
+  sensitive = true
 }

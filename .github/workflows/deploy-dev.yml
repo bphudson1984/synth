@@ -1,0 +1,81 @@
+name: Deploy to Dev Environment
+
+on:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test DSP Engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run tests
+        run: cargo test -p dsp-common -p prophet-dsp -p braids-dsp -p tb303-dsp -p tr808-dsp -p tr909-dsp -p audio-test-harness
+
+  build-and-deploy:
+    name: Build WASM & Deploy to Dev
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build WASM
+        run: |
+          cargo build -p tr808-wasm -p prophet-wasm -p tb303-wasm -p braids-wasm --target wasm32-unknown-unknown --release
+          cp target/wasm32-unknown-unknown/release/tr808_wasm.wasm orbit/public/tr808.wasm
+          cp target/wasm32-unknown-unknown/release/prophet_wasm.wasm orbit/public/prophet-dsp.wasm
+          cp target/wasm32-unknown-unknown/release/tb303_wasm.wasm orbit/public/tb303.wasm
+          cp target/wasm32-unknown-unknown/release/braids_wasm.wasm orbit/public/braids-dsp.wasm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: orbit/package-lock.json
+
+      - name: Install dependencies
+        run: cd orbit && npm ci
+
+      - name: Build Svelte app
+        run: cd orbit && npx vite build
+
+      - name: Deploy to Dev Static Web App
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_DEV_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          app_location: orbit/dist
+          skip_app_build: true
+          skip_api_build: true
