@@ -81,3 +81,4 @@ pub extern "C" fn seq_set_step_slide(step: u8, slide: u8) {
 #[no_mangle] pub extern "C" fn seq_set_direction(dir: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.direction = dir; } } }
 #[no_mangle] pub extern "C" fn seq_set_swing(swing: f32) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.swing = swing.clamp(0.0, 1.0); } } }
 #[no_mangle] pub extern "C" fn seq_set_time_div(div: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_time_div(div); } } }
+#[no_mangle] pub extern "C" fn seq_set_glitch(size: u8) { unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_glitch(size as usize); } } }

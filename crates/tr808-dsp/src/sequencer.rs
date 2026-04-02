@@ -43,6 +43,7 @@ pub struct Sequencer {
     pattern: Pattern,
     state: PlayState,
     current_step: usize,
+    display_step: usize,
     samples_per_step: f32,
     sample_counter: f32,
     sample_rate: f32,
@@ -51,6 +52,11 @@ pub struct Sequencer {
     pub bpm: f32,       // 30-300
     pub swing: f32,     // 0-1
     time_div: u8,       // 0=1/4, 1=1/8, 2=1/16, 3=1/32
+    // Glitch mode
+    glitch_size: usize,
+    glitch_start: usize,
+    glitch_pos: usize,
+    glitch_origin: usize,
 }
 
 /// Events emitted by the sequencer each sample.
@@ -65,6 +71,7 @@ impl Sequencer {
             pattern: Pattern::default(),
             state: PlayState::Stopped,
             current_step: 0,
+            display_step: 0,
             samples_per_step: 0.0,
             sample_counter: 0.0,
             sample_rate,
@@ -72,6 +79,7 @@ impl Sequencer {
             bpm: 120.0,
             swing: 0.5,
             time_div: 2,
+            glitch_size: 0, glitch_start: 0, glitch_pos: 0, glitch_origin: 0,
         };
         seq.update_timing();
         seq
@@ -91,8 +99,10 @@ impl Sequencer {
     pub fn play(&mut self) {
         self.state = PlayState::Playing;
         self.current_step = 0;
+        self.display_step = 0;
         self.sample_counter = 0.0;
         self.trigger_pending = true; // fire step 0 immediately
+        self.glitch_size = 0;
         self.update_timing();
     }
 
@@ -108,7 +118,29 @@ impl Sequencer {
     }
 
     pub fn current_step(&self) -> usize {
-        self.current_step
+        self.display_step
+    }
+
+    pub fn set_glitch(&mut self, size: usize) {
+        let len = self.pattern.length;
+        if size > 0 && self.glitch_size == 0 {
+            self.glitch_origin = self.current_step;
+            self.glitch_size = size;
+            self.glitch_start = (self.current_step + len - size) % len;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        } else if size == 0 && self.glitch_size > 0 {
+            self.glitch_size = 0;
+            self.current_step = self.glitch_origin;
+            self.display_step = self.glitch_origin;
+        } else if size > 0 && size != self.glitch_size {
+            self.glitch_size = size;
+            self.glitch_start = (self.glitch_origin + len - size) % len;
+            self.glitch_pos = 0;
+            self.current_step = self.glitch_start;
+            self.trigger_pending = true;
+        }
     }
 
     pub fn set_bpm(&mut self, bpm: f32) {
@@ -176,12 +208,18 @@ impl Sequencer {
             if self.sample_counter >= step_length {
                 self.sample_counter -= step_length;
                 // Advance to next step
-                self.current_step = (self.current_step + 1) % self.pattern.length;
+                if self.glitch_size > 0 {
+                    self.glitch_pos = (self.glitch_pos + 1) % self.glitch_size;
+                    self.current_step = (self.glitch_start + self.glitch_pos) % self.pattern.length;
+                } else {
+                    self.current_step = (self.current_step + 1) % self.pattern.length;
+                }
                 should_trigger = true;
             }
         }
 
         if should_trigger {
+            self.display_step = self.current_step;
             // Collect triggers for current step
             for track in 0..NUM_TRACKS {
                 let step = &self.pattern.tracks[track][self.current_step];

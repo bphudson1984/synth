@@ -12,6 +12,7 @@ export const isRecording = writable(false);
 type TransportCallbacks = {
     play: () => void;
     stop: () => void;
+    setGlitch?: (size: number) => void;
 };
 
 const engines: TransportCallbacks[] = [];
@@ -32,4 +33,11 @@ export function togglePlay() {
 
 export function toggleRecord() {
     isRecording.update(v => !v);
+}
+
+export const mixGlitchSize = writable(0);
+
+export function setMixGlitch(size: number) {
+    mixGlitchSize.set(size);
+    for (const e of engines) e.setGlitch?.(size);
 }

@@ -33,6 +33,7 @@ export function setAcidEngine(e: AcidEngine) {
     registerEngine({
         play: () => { lastAcidStep = -1; engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
         stop: () => { engine?.seqStop(); currentStep.set(0); lastAcidStep = -1; },
+        setGlitch: (size: number) => { setAcidGlitch(size); },
     });
 }
 
@@ -50,6 +51,12 @@ export const synthParams = writable<Record<AcidParamName, number>>({
 export { isPlaying, togglePlay } from '../../shared/stores/transport';
 export const currentStep = writable(0);
 export const waveform = writable<'saw' | 'square'>('saw');
+export const acidGlitchSize = writable(0);
+
+export function setAcidGlitch(size: number) {
+    acidGlitchSize.set(size);
+    engine?.seqSetGlitch(size);
+}
 
 export const sliderValue = derived(
     [selectedParam, synthParams],

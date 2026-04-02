@@ -43,4 +43,5 @@ export abstract class BaseEngine {
     seqStop() { this.node?.port.postMessage({ type: 'seq-stop' }); }
     seqSetBpm(bpm: number) { this.node?.port.postMessage({ type: 'seq-bpm', value: bpm }); }
     seqClear() { this.node?.port.postMessage({ type: 'seq-clear' }); }
+    seqSetGlitch(size: number) { this.node?.port.postMessage({ type: 'seq-set-glitch', value: size }); }
 }

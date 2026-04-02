@@ -114,3 +114,6 @@ pub extern "C" fn seq_set_step_gate(step: u8, gate: u8) {
 #[no_mangle] pub extern "C" fn seq_rotate(dir: i32) {
     unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.rotate(dir); } }
 }
+#[no_mangle] pub extern "C" fn seq_set_glitch(size: u8) {
+    unsafe { if let Some(e) = ENGINE.as_mut() { e.sequencer.set_glitch(size as usize); } }
+}
