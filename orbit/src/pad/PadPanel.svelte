@@ -7,7 +7,9 @@
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
         setQuickSlotSliderValue,
+        padSequenceBank, currentPadSequenceIndex, padChainMode, padRandomMode,
         selectChord, triggerChord, loadPreset, toggleArp,
+        switchPadSequence, addPadSequence, duplicatePadSequence, deletePadSequence, togglePadChain, togglePadRandom,
     } from './stores/state';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
     import { get } from 'svelte/store';
@@ -18,6 +20,7 @@
     import SeqSettingsRow from '../shared/components/SeqSettingsRow.svelte';
     import StepSettingsRow from '../shared/components/StepSettingsRow.svelte';
     import SynthSettings from '../shared/components/SynthSettings.svelte';
+    import SequenceBankSelector from '../shared/components/SequenceBankSelector.svelte';
 
     const PAD_COLOUR = '#E8944A';
 
@@ -25,6 +28,10 @@
     $: triggered = $triggeredChords;
     $: presetIdx = $currentPresetIndex;
     $: arp = $arpEnabled;
+    $: seqBank = $padSequenceBank;
+    $: seqIdx = $currentPadSequenceIndex;
+    $: chain = $padChainMode;
+    $: random = $padRandomMode;
 
     $: showSettings = $settingsOpen;
     $: settingsVals = $settingsValues;
@@ -113,6 +120,20 @@
             <div class="drawer-row"><StepSettingsRow colour={PAD_COLOUR} seq={padSeq} /></div>
         {/if}
         <NoteSequencer colour={PAD_COLOUR} seq={padSeq} />
+        <SequenceBankSelector
+            currentIndex={seqIdx}
+            count={seqBank.length}
+            maxCount={8}
+            colour={PAD_COLOUR}
+            onSelect={switchPadSequence}
+            onAdd={addPadSequence}
+            onDuplicate={duplicatePadSequence}
+            onDelete={deletePadSequence}
+            chainActive={chain}
+            randomActive={random}
+            onToggleChain={togglePadChain}
+            onToggleRandom={togglePadRandom}
+        />
     {/if}
     <PadCircle
         voices={CHORDS.map(c => ({ id: c.id, label: c.label, colour: c.colour }))}

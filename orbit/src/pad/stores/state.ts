@@ -12,9 +12,26 @@ import { createNoteSequencerStore } from '../../shared/stores/noteSequencer';
 export const padSeq = createNoteSequencerStore();
 
 let engine: ProphetEngine | null = null;
+let lastPadStep = -1;
+
 export function setPadEngine(e: ProphetEngine) {
     engine = e;
-    e.onStep = (step) => padSeq.connectOnStep(step);
+    e.onStep = (step) => {
+        padSeq.connectOnStep(step);
+        if (step === 0 && lastPadStep > 0) {
+            const bank = get(padSequenceBank);
+            if (bank.length > 1) {
+                if (get(padChainMode)) {
+                    switchPadSequence((get(currentPadSequenceIndex) + 1) % bank.length);
+                } else if (get(padRandomMode)) {
+                    let nextIdx = get(currentPadSequenceIndex);
+                    while (nextIdx === get(currentPadSequenceIndex)) nextIdx = Math.floor(Math.random() * bank.length);
+                    switchPadSequence(nextIdx);
+                }
+            }
+        }
+        lastPadStep = step;
+    };
     padSeq.connectEngine(e);
     bpm.subscribe((value) => {
         if (engine && get(arpEnabled)) {
@@ -211,6 +228,66 @@ export function setQuickSlotSliderValue(value: number) {
     if (!slot) return;
     const actual = slot.min + (value / 100) * (slot.max - slot.min);
     setSettingsParam(slot.id, actual);
+}
+
+// --- Sequence bank ---
+const MAX_SEQUENCES = 8;
+
+export const padSequenceBank = writable<ReturnType<typeof padSeq.captureSequence>[]>([padSeq.captureSequence()]);
+export const currentPadSequenceIndex = writable(0);
+export const padChainMode = writable(false);
+export const padRandomMode = writable(false);
+
+export function togglePadChain() {
+    padChainMode.update(v => { if (!v) padRandomMode.set(false); return !v; });
+}
+export function togglePadRandom() {
+    padRandomMode.update(v => { if (!v) padChainMode.set(false); return !v; });
+}
+
+export function switchPadSequence(index: number) {
+    const bank = get(padSequenceBank);
+    if (index < 0 || index >= bank.length || index === get(currentPadSequenceIndex)) return;
+    bank[get(currentPadSequenceIndex)] = padSeq.captureSequence();
+    padSequenceBank.set(bank);
+    padSeq.restoreSequence(bank[index]);
+    currentPadSequenceIndex.set(index);
+}
+
+export function addPadSequence() {
+    const bank = get(padSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    bank[get(currentPadSequenceIndex)] = padSeq.captureSequence();
+    padSeq.clearSequence();
+    bank.push(padSeq.captureSequence());
+    padSequenceBank.set(bank);
+    currentPadSequenceIndex.set(bank.length - 1);
+}
+
+export function deletePadSequence() {
+    const bank = get(padSequenceBank);
+    if (bank.length <= 1) return;
+    const idx = get(currentPadSequenceIndex);
+    bank.splice(idx, 1);
+    const newIdx = Math.min(idx, bank.length - 1);
+    padSequenceBank.set(bank);
+    padSeq.restoreSequence(bank[newIdx]);
+    currentPadSequenceIndex.set(newIdx);
+}
+
+export function duplicatePadSequence() {
+    const bank = get(padSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    const current = padSeq.captureSequence();
+    bank[get(currentPadSequenceIndex)] = current;
+    // Deep clone for the duplicate
+    const clone = {
+        ...current,
+        steps: current.steps.map(s => ({ ...s, notes: [...s.notes] })),
+    };
+    bank.push(clone);
+    padSequenceBank.set(bank);
+    currentPadSequenceIndex.set(bank.length - 1);
 }
 
 export function loadPreset(index: number) {

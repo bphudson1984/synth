@@ -219,6 +219,44 @@ export function createNoteSequencerStore() {
         lenMode.set(false);
     }
 
+    function captureSequence() {
+        return {
+            steps: get(seqSteps).map(s => ({ ...s, notes: [...s.notes] })),
+            numPages: get(seqNumPages),
+            direction: get(seqDirection),
+            swing: get(seqSwing),
+            timeDivision: get(seqTimeDivision),
+        };
+    }
+
+    function restoreSequence(snapshot: { steps: SeqStep[]; numPages: number; direction: number; swing: number; timeDivision: number }) {
+        engine?.seqClear();
+        const steps = snapshot.steps.map(s => ({ ...s, notes: [...s.notes] }));
+        seqSteps.set(steps);
+        seqNumPages.set(snapshot.numPages);
+        seqCurrentPage.set(0);
+        seqSelectedStep.set(0);
+        seqDirection.set(snapshot.direction);
+        seqSwing.set(snapshot.swing);
+        seqTimeDivision.set(snapshot.timeDivision);
+        engine?.setSeqLength(snapshot.numPages * PAGE_SIZE);
+        engine?.setDirection(snapshot.direction);
+        engine?.setSwing(snapshot.swing / 100);
+        engine?.setTimeDivision(snapshot.timeDivision);
+        for (let i = 0; i < steps.length; i++) {
+            const s = steps[i];
+            if (s.gate) {
+                engine?.setStepNotes(i, s.notes);
+                engine?.setStepGate(i, true);
+                engine?.setStepVelocity(i, Math.round(s.velocity * 1.27));
+                engine?.setStepGatePct(i, s.gatePct);
+                engine?.setStepProbability(i, s.probability);
+                engine?.setStepRatchet(i, s.ratchet);
+                if (s.skip) engine?.setStepSkip(i, true);
+            }
+        }
+    }
+
     return {
         // Stores
         seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
@@ -232,6 +270,7 @@ export function createNoteSequencerStore() {
         setSeqDirection, setSeqSwing, setSeqTimeDivision, rotatePattern, randomizeGates,
         toggleLenMode, setLenFromStep,
         toggleSeqSettings, toggleStepSettings, closeAllDrawers,
+        captureSequence, restoreSequence,
     };
 }
 

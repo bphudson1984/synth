@@ -12,10 +12,25 @@ import type { NoteSequencerStore } from '../../shared/stores/noteSequencer';
 import { bpm, isPlaying, isRecording, registerEngine } from '../../shared/stores/transport';
 
 let engine: BraidsEngine | null = null;
+let lastLeadStep = -1;
+
 export function setLeadEngine(e: BraidsEngine) {
     engine = e;
     e.onStep = (step) => {
         seqCurrentStep.set(step);
+        if (step === 0 && lastLeadStep > 0) {
+            const bank = get(leadSequenceBank);
+            if (bank.length > 1) {
+                if (get(leadChainMode)) {
+                    switchLeadSequence((get(currentLeadSequenceIndex) + 1) % bank.length);
+                } else if (get(leadRandomMode)) {
+                    let nextIdx = get(currentLeadSequenceIndex);
+                    while (nextIdx === get(currentLeadSequenceIndex)) nextIdx = Math.floor(Math.random() * bank.length);
+                    switchLeadSequence(nextIdx);
+                }
+            }
+        }
+        lastLeadStep = step;
         if (get(arpMode) !== 'off') {
             // Feed sequencer chord into the arp
             const steps = get(seqSteps);
@@ -32,6 +47,7 @@ export function setLeadEngine(e: BraidsEngine) {
     );
     registerEngine({
         play: () => {
+            lastLeadStep = -1;
             const arpOn = get(arpMode) !== 'off';
             engine?.setSeqExternal(arpOn);
             engine?.seqSetBpm(get(bpm)); engine?.seqPlay();
@@ -43,6 +59,7 @@ export function setLeadEngine(e: BraidsEngine) {
         },
         stop: () => {
             engine?.seqStop(); seqCurrentStep.set(0);
+            lastLeadStep = -1;
             engine?.setSeqExternal(false);
             stopArp();
             // Belt-and-suspenders: release any note the engine might be holding
@@ -588,6 +605,111 @@ function arpTick() {
     }
 }
 
+// --- Sequence bank ---
+const MAX_SEQUENCES = 8;
+
+interface LeadSequenceSnapshot {
+    steps: SeqStep[];
+    numPages: number;
+    direction: number;
+    swing: number;
+    timeDivision: number;
+}
+
+function captureLeadSequence(): LeadSequenceSnapshot {
+    return {
+        steps: get(seqSteps).map(s => ({ ...s, notes: [...s.notes] })),
+        numPages: get(seqNumPages),
+        direction: get(seqDirection),
+        swing: get(seqSwing),
+        timeDivision: get(seqTimeDivision),
+    };
+}
+
+function restoreLeadSequence(snapshot: LeadSequenceSnapshot) {
+    engine?.seqClear();
+    const steps = snapshot.steps.map(s => ({ ...s, notes: [...s.notes] }));
+    seqSteps.set(steps);
+    seqNumPages.set(snapshot.numPages);
+    seqCurrentPage.set(0);
+    seqSelectedStep.set(0);
+    seqDirection.set(snapshot.direction);
+    seqSwing.set(snapshot.swing);
+    seqTimeDivision.set(snapshot.timeDivision);
+    engine?.setSeqLength(snapshot.numPages * PAGE_SIZE);
+    engine?.setDirection(snapshot.direction);
+    engine?.setSwing(snapshot.swing / 100);
+    engine?.setTimeDivision(snapshot.timeDivision);
+    for (let i = 0; i < steps.length; i++) {
+        const s = steps[i];
+        if (s.gate) {
+            engine?.setStepNotes(i, s.notes);
+            engine?.setStepGate(i, true);
+            engine?.setStepVelocity(i, Math.round(s.velocity * 1.27));
+            engine?.setStepGatePct(i, s.gatePct);
+            engine?.setStepProbability(i, s.probability);
+            engine?.setStepRatchet(i, s.ratchet);
+            if (s.skip) engine?.setStepSkip(i, true);
+        }
+    }
+}
+
+export const leadSequenceBank = writable<LeadSequenceSnapshot[]>([captureLeadSequence()]);
+export const currentLeadSequenceIndex = writable(0);
+export const leadChainMode = writable(false);
+export const leadRandomMode = writable(false);
+
+export function toggleLeadChain() {
+    leadChainMode.update(v => { if (!v) leadRandomMode.set(false); return !v; });
+}
+export function toggleLeadRandom() {
+    leadRandomMode.update(v => { if (!v) leadChainMode.set(false); return !v; });
+}
+
+export function switchLeadSequence(index: number) {
+    const bank = get(leadSequenceBank);
+    if (index < 0 || index >= bank.length || index === get(currentLeadSequenceIndex)) return;
+    bank[get(currentLeadSequenceIndex)] = captureLeadSequence();
+    leadSequenceBank.set(bank);
+    restoreLeadSequence(bank[index]);
+    currentLeadSequenceIndex.set(index);
+}
+
+export function addLeadSequence() {
+    const bank = get(leadSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    bank[get(currentLeadSequenceIndex)] = captureLeadSequence();
+    clearSequence();
+    bank.push(captureLeadSequence());
+    leadSequenceBank.set(bank);
+    currentLeadSequenceIndex.set(bank.length - 1);
+}
+
+export function deleteLeadSequence() {
+    const bank = get(leadSequenceBank);
+    if (bank.length <= 1) return;
+    const idx = get(currentLeadSequenceIndex);
+    bank.splice(idx, 1);
+    const newIdx = Math.min(idx, bank.length - 1);
+    leadSequenceBank.set(bank);
+    restoreLeadSequence(bank[newIdx]);
+    currentLeadSequenceIndex.set(newIdx);
+}
+
+export function duplicateLeadSequence() {
+    const bank = get(leadSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    const current = captureLeadSequence();
+    bank[get(currentLeadSequenceIndex)] = current;
+    const clone: LeadSequenceSnapshot = {
+        ...current,
+        steps: current.steps.map(s => ({ ...s, notes: [...s.notes] })),
+    };
+    bank.push(clone);
+    leadSequenceBank.set(bank);
+    currentLeadSequenceIndex.set(bank.length - 1);
+}
+
 // --- Adapter: bundle sequencer stores for shared NoteSequencer components ---
 export const leadSeq: NoteSequencerStore = {
     seqSteps, seqNumPages, seqCurrentPage, seqSelectedStep, seqCurrentStep,
@@ -605,4 +727,10 @@ export const leadSeq: NoteSequencerStore = {
     toggleLenMode, setLenFromStep,
     toggleSeqSettings, toggleStepSettings,
     closeAllDrawers: () => { seqSettingsOpen.set(false); stepSettingsOpen.set(false); lenMode.set(false); arpSettingsOpen.set(false); },
+    captureSequence: captureLeadSequence,
+    restoreSequence: restoreLeadSequence,
+    setStepFromNotes: (stepIndex: number, notes: number[], label: string) => {
+        seqSteps.update(s => { s[stepIndex] = { ...s[stepIndex], notes, gate: true, label }; return [...s]; });
+        engine?.setStepNotes(stepIndex, notes);
+    },
 };

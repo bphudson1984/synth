@@ -8,14 +8,31 @@ import { bpm, registerEngine } from '../../shared/stores/transport';
 import { registerMixerCallback } from '../../shared/stores/mixer';
 
 let engine: AcidEngine | null = null;
+let lastAcidStep = -1;
+
 export function setAcidEngine(e: AcidEngine) {
     engine = e;
-    e.onStep = (step) => currentStep.set(step);
+    e.onStep = (step) => {
+        currentStep.set(step);
+        if (step === 0 && lastAcidStep > 0) {
+            const bank = get(acidSequenceBank);
+            if (bank.length > 1) {
+                if (get(acidChainMode)) {
+                    switchAcidSequence((get(currentAcidSequenceIndex) + 1) % bank.length);
+                } else if (get(acidRandomMode)) {
+                    let nextIdx = get(currentAcidSequenceIndex);
+                    while (nextIdx === get(currentAcidSequenceIndex)) nextIdx = Math.floor(Math.random() * bank.length);
+                    switchAcidSequence(nextIdx);
+                }
+            }
+        }
+        lastAcidStep = step;
+    };
     bpm.subscribe((value) => { engine?.seqSetBpm(value); });
     registerMixerCallback('acid', (gain) => { engine?.setParam(PARAM.VOLUME, gain); }, (pan) => { engine?.setPan(pan); });
     registerEngine({
-        play: () => { engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
-        stop: () => { engine?.seqStop(); currentStep.set(0); },
+        play: () => { lastAcidStep = -1; engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
+        stop: () => { engine?.seqStop(); currentStep.set(0); lastAcidStep = -1; },
     });
 }
 
@@ -183,6 +200,106 @@ export function loadPreset(index: number) {
     engine.setParam(PARAM.WAVEFORM, waveVal);
     settingsValues.set({ [PARAM.DECAY]: decayVal, [PARAM.ACCENT]: accentVal, [PARAM.WAVEFORM]: waveVal });
     currentTranspose.set(0);
+}
+
+// --- Sequence bank ---
+const MAX_SEQUENCES = 8;
+
+interface AcidSequenceSnapshot {
+    stepNotes: number[];
+    stepGates: boolean[];
+    stepAccents: boolean[];
+    stepSlides: boolean[];
+}
+
+function captureAcidSequence(): AcidSequenceSnapshot {
+    return {
+        stepNotes: [...get(stepNotes)],
+        stepGates: [...get(stepGates)],
+        stepAccents: [...get(stepAccents)],
+        stepSlides: [...get(stepSlides)],
+    };
+}
+
+function restoreAcidSequence(snapshot: AcidSequenceSnapshot) {
+    engine?.seqClear();
+    const notes = [...snapshot.stepNotes];
+    const gates = [...snapshot.stepGates];
+    const accents = [...snapshot.stepAccents];
+    const slides = [...snapshot.stepSlides];
+    for (let i = 0; i < NUM_STEPS; i++) {
+        engine?.setStepNote(i, notes[i]);
+        engine?.setStepGate(i, gates[i]);
+        engine?.setStepAccent(i, accents[i]);
+        engine?.setStepSlide(i, slides[i]);
+    }
+    stepNotes.set(notes);
+    stepGates.set(gates);
+    stepAccents.set(accents);
+    stepSlides.set(slides);
+}
+
+export const acidSequenceBank = writable<AcidSequenceSnapshot[]>([captureAcidSequence()]);
+export const currentAcidSequenceIndex = writable(0);
+export const acidChainMode = writable(false);
+export const acidRandomMode = writable(false);
+
+export function toggleAcidChain() {
+    acidChainMode.update(v => { if (!v) acidRandomMode.set(false); return !v; });
+}
+export function toggleAcidRandom() {
+    acidRandomMode.update(v => { if (!v) acidChainMode.set(false); return !v; });
+}
+
+export function switchAcidSequence(index: number) {
+    const bank = get(acidSequenceBank);
+    if (index < 0 || index >= bank.length || index === get(currentAcidSequenceIndex)) return;
+    bank[get(currentAcidSequenceIndex)] = captureAcidSequence();
+    acidSequenceBank.set(bank);
+    restoreAcidSequence(bank[index]);
+    currentAcidSequenceIndex.set(index);
+}
+
+export function addAcidSequence() {
+    const bank = get(acidSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    bank[get(currentAcidSequenceIndex)] = captureAcidSequence();
+    bank.push({
+        stepNotes: Array(NUM_STEPS).fill(48),
+        stepGates: Array(NUM_STEPS).fill(false),
+        stepAccents: Array(NUM_STEPS).fill(false),
+        stepSlides: Array(NUM_STEPS).fill(false),
+    });
+    acidSequenceBank.set(bank);
+    const newIdx = bank.length - 1;
+    restoreAcidSequence(bank[newIdx]);
+    currentAcidSequenceIndex.set(newIdx);
+}
+
+export function deleteAcidSequence() {
+    const bank = get(acidSequenceBank);
+    if (bank.length <= 1) return;
+    const idx = get(currentAcidSequenceIndex);
+    bank.splice(idx, 1);
+    const newIdx = Math.min(idx, bank.length - 1);
+    acidSequenceBank.set(bank);
+    restoreAcidSequence(bank[newIdx]);
+    currentAcidSequenceIndex.set(newIdx);
+}
+
+export function duplicateAcidSequence() {
+    const bank = get(acidSequenceBank);
+    if (bank.length >= MAX_SEQUENCES) return;
+    const current = captureAcidSequence();
+    bank[get(currentAcidSequenceIndex)] = current;
+    bank.push({
+        stepNotes: [...current.stepNotes],
+        stepGates: [...current.stepGates],
+        stepAccents: [...current.stepAccents],
+        stepSlides: [...current.stepSlides],
+    });
+    acidSequenceBank.set(bank);
+    currentAcidSequenceIndex.set(bank.length - 1);
 }
 
 export function randomizePattern() {
