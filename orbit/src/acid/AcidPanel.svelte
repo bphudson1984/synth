@@ -1,11 +1,12 @@
 <script lang="ts">
     import { get, writable } from 'svelte/store';
-    import { NOTE_PADS, ACID_PARAMS, ACID_COLOUR, ACID_SETTINGS } from './constants';
+    import { NOTE_PADS, ACID_COLOUR, ACID_SETTINGS } from './constants';
     import { PRESETS } from './presets';
     import {
-        selectedParam, sliderValue, currentPresetIndex, currentTranspose,
+        currentPresetIndex, currentTranspose,
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
-        selectAcidParam, setSliderValue,
+        quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
+        setQuickSlotSliderValue,
         loadPreset, randomizePattern, transposePattern,
     } from './stores/state';
     import PadCircle from '../shared/components/PadCircle.svelte';
@@ -15,12 +16,17 @@
     import AcidTransport from './AcidTransport.svelte';
     import SynthSettings from '../shared/components/SynthSettings.svelte';
 
-    $: selParam = $selectedParam;
-    $: sliderVal = $sliderValue;
     $: presetIdx = $currentPresetIndex;
     $: transpose = $currentTranspose;
     $: showSettings = $settingsOpen;
     $: settingsVals = $settingsValues;
+    $: slots = $quickSlots;
+    $: activeSlot = $activeQuickSlot;
+    $: activeSlotParam = activeSlot !== null ? slots[activeSlot] : null;
+    $: qsLabel = activeSlotParam?.name ?? '';
+    $: qsValue = activeSlotParam
+        ? ((settingsVals[activeSlotParam.id] ?? activeSlotParam.default) - activeSlotParam.min) / (activeSlotParam.max - activeSlotParam.min) * 100
+        : 0;
 
     // Highlight the pad matching the current transposition
     $: activePadIndex = NOTE_PADS.findIndex(p => p.semitones === transpose);
@@ -56,23 +62,29 @@
             colour={ACID_COLOUR}
             values={settingsVals}
             onParamChange={setSettingsParam}
+            quickSlots={slots}
+            onAssignQuickSlot={assignQuickSlot}
         />
     {:else}
         <AcidSequencer />
         <AcidTransport />
-        <PadCircle
-            voices={NOTE_PADS.map(p => ({ id: p.id, label: p.label, colour: p.colour }))}
-            params={[...ACID_PARAMS]}
-            selectedVoice={activePadIndex}
-            selectedParam={selParam}
-            triggeredVoices={triggered}
-            onPadClick={handlePadClick}
-            onPadDown={handlePadDown}
-            onParamSelect={selectAcidParam}
-        />
-        <PlayControls />
-        <Slider label={selParam} value={sliderVal} colour={ACID_COLOUR} onChange={setSliderValue} />
     {/if}
+    <PadCircle
+        voices={NOTE_PADS.map(p => ({ id: p.id, label: p.label, colour: p.colour }))}
+        params={[]}
+        selectedVoice={activePadIndex}
+        selectedParam=""
+        triggeredVoices={triggered}
+        onPadClick={handlePadClick}
+        onPadDown={handlePadDown}
+        onParamSelect={() => {}}
+        quickSlots={slots}
+        activeQuickSlot={activeSlot}
+        colour={ACID_COLOUR}
+        onQuickSlotSelect={selectQuickSlot}
+    />
+    <PlayControls />
+    <Slider label={qsLabel} value={qsValue} colour={ACID_COLOUR} onChange={setQuickSlotSliderValue} />
 </div>
 
 <style>

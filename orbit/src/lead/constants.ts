@@ -50,8 +50,16 @@ import { PARAM } from './audio/engine';
 
 export const LEAD_SETTINGS: SettingsSection[] = [
     {
+        label: 'OSC',
+        params: [
+            { name: 'TIMBRE', id: PARAM.TIMBRE,  min: 0, max: 1, default: 0.5, type: 'slider' },
+            { name: 'COLOR',  id: PARAM.COLOR,   min: 0, max: 1, default: 0.5, type: 'slider' },
+        ],
+    },
+    {
         label: 'FILTER',
         params: [
+            { name: 'CUTOFF',  id: PARAM.FILTER_CUTOFF,    min: 100, max: 12000, default: 6000, type: 'slider' },
             { name: 'RES',     id: PARAM.FILTER_RESONANCE, min: 0, max: 1, default: 0, type: 'slider' },
             { name: 'ENV AMT', id: PARAM.FILTER_ENV_AMT,   min: 0, max: 1, default: 0, type: 'slider' },
         ],
@@ -71,6 +79,7 @@ export const LEAD_SETTINGS: SettingsSection[] = [
             { name: 'ATTACK',  id: PARAM.AMP_ATTACK,   min: 0.005, max: 2, default: 0.01, type: 'slider' },
             { name: 'DECAY',   id: PARAM.AMP_DECAY,    min: 0.01, max: 3, default: 0.3, type: 'slider' },
             { name: 'SUSTAIN', id: PARAM.AMP_SUSTAIN,   min: 0, max: 1, default: 0.8, type: 'slider' },
+            { name: 'RELEASE', id: PARAM.AMP_RELEASE,   min: 0.01, max: 3, default: 0.3, type: 'slider' },
         ],
     },
     {

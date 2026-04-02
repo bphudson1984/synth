@@ -29,10 +29,19 @@ import { PARAM } from './audio/engine';
 
 export const ACID_SETTINGS: SettingsSection[] = [
     {
+        label: 'FILTER',
+        params: [
+            { name: 'CUTOFF',    id: PARAM.CUTOFF,    min: 100, max: 5000, default: 1500, type: 'slider' },
+            { name: 'RESONANCE', id: PARAM.RESONANCE,  min: 0, max: 1, default: 0.6, type: 'slider' },
+            { name: 'ENV MOD',   id: PARAM.ENV_MOD,    min: 0, max: 1, default: 0.7, type: 'slider' },
+        ],
+    },
+    {
         label: 'TONE',
         params: [
             { name: 'DECAY',    id: PARAM.DECAY,    min: 0.03, max: 3, default: 0.3, type: 'slider' },
             { name: 'ACCENT',   id: PARAM.ACCENT,   min: 0, max: 1, default: 0.5, type: 'slider' },
+            { name: 'DIST',     id: PARAM.DISTORTION, min: 0, max: 1, default: 0.3, type: 'slider' },
             { name: 'WAVEFORM', id: PARAM.WAVEFORM,  min: 0, max: 1, default: 0, type: 'select',
               options: [
                   { value: 0, label: 'SAW' }, { value: 1, label: 'SQR' },

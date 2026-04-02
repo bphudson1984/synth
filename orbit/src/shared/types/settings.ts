@@ -14,3 +14,6 @@ export interface SettingsSection {
     label: string;
     params: SettingsParam[];
 }
+
+export type QuickSlot = SettingsParam | null;
+export const NUM_QUICK_SLOTS = 8;

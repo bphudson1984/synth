@@ -1,17 +1,35 @@
 <script lang="ts">
-    import type { SettingsSection, SettingsParam } from '../types/settings';
+    import type { SettingsSection, SettingsParam, QuickSlot } from '../types/settings';
+    import { NUM_QUICK_SLOTS } from '../types/settings';
 
     let {
         sections,
         colour,
         values,
         onParamChange,
+        quickSlots = [],
+        onAssignQuickSlot = undefined,
     }: {
         sections: SettingsSection[];
         colour: string;
         values: Record<number, number>;
         onParamChange: (id: number, value: number) => void;
+        quickSlots?: QuickSlot[];
+        onAssignQuickSlot?: (slotIndex: number, param: SettingsParam | null) => void;
     } = $props();
+
+    function isAssignedToSlot(param: SettingsParam, slotIndex: number): boolean {
+        return quickSlots[slotIndex]?.id === param.id;
+    }
+
+    function handleAssign(slotIndex: number, param: SettingsParam) {
+        if (!onAssignQuickSlot) return;
+        if (isAssignedToSlot(param, slotIndex)) {
+            onAssignQuickSlot(slotIndex, null);
+        } else {
+            onAssignQuickSlot(slotIndex, param);
+        }
+    }
 
     let activeTab = $state(0);
 
@@ -90,6 +108,18 @@
                     />
                     <span class="param-value" style="color: {colour}">{formatValue(param)}</span>
                 {/if}
+                {#if onAssignQuickSlot && param.type === 'slider'}
+                    <div class="assign-group">
+                        {#each Array(NUM_QUICK_SLOTS) as _, si}
+                            <button
+                                class="assign-btn"
+                                class:assigned={isAssignedToSlot(param, si)}
+                                onclick={() => handleAssign(si, param)}
+                                style="--c: {colour}"
+                            >{si + 1}</button>
+                        {/each}
+                    </div>
+                {/if}
             </div>
         {/each}
     </div>
@@ -97,10 +127,10 @@
 
 <style>
     .settings {
-        flex: 1;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        max-height: 40vh;
     }
     .tabs {
         display: flex;
@@ -224,6 +254,34 @@
     .select-btn.active {
         background: var(--c);
         color: #fff;
+        border-color: var(--c);
+    }
+    .assign-group {
+        display: flex;
+        gap: 2px;
+        margin-left: 4px;
+        flex-shrink: 0;
+    }
+    .assign-btn {
+        width: 18px; height: 18px;
+        padding: 0;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 8px;
+        font-weight: 600;
+        background: transparent;
+        color: var(--orbit-hint, #444);
+        border: 1px dashed var(--orbit-border, #333);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 100ms;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .assign-btn.assigned {
+        background: var(--c);
+        color: #fff;
+        border-style: solid;
         border-color: var(--c);
     }
 </style>

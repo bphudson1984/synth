@@ -5,6 +5,7 @@ import {
     MODELS, LEAD_PARAMS, LEAD_PARAM_MAP, LEAD_SETTINGS, SCALE_NOTES, SCALE_CHORDS,
     NUM_STEPS, type LeadParamName, type PadMode, type ArpMode, type ArpDivision,
 } from '../constants';
+import { NUM_QUICK_SLOTS, type QuickSlot, type SettingsParam } from '../../shared/types/settings';
 import { LEAD_PRESETS } from '../presets';
 import { registerMixerCallback } from '../../shared/stores/mixer';
 import type { NoteSequencerStore } from '../../shared/stores/noteSequencer';
@@ -115,6 +116,56 @@ export function toggleSettings() {
 export function setSettingsParam(id: number, value: number) {
     settingsValues.update(v => { v[id] = value; return { ...v }; });
     engine?.setParam(id, value);
+}
+
+// --- Quick Slots ---
+function findSettingsParam(id: number): SettingsParam | null {
+    for (const section of LEAD_SETTINGS) {
+        for (const p of section.params) if (p.id === id) return p;
+    }
+    return null;
+}
+
+function buildInitialSlots(): QuickSlot[] {
+    const slots: QuickSlot[] = Array(NUM_QUICK_SLOTS).fill(null);
+    const frontPanelIds = [PARAM.TIMBRE, PARAM.COLOR, PARAM.FILTER_CUTOFF, PARAM.AMP_RELEASE];
+    frontPanelIds.forEach((id, i) => { slots[i] = findSettingsParam(id); });
+    return slots;
+}
+
+export const quickSlots = writable<QuickSlot[]>(buildInitialSlots());
+export const activeQuickSlot = writable<number | null>(0);
+
+export function assignQuickSlot(slotIndex: number, param: SettingsParam | null) {
+    quickSlots.update(s => { s[slotIndex] = param; return [...s]; });
+}
+
+export function selectQuickSlot(slotIndex: number) {
+    const slots = get(quickSlots);
+    if (!slots[slotIndex]) return;
+    activeQuickSlot.set(slotIndex);
+}
+
+export function clearQuickSlotSelection() {
+    activeQuickSlot.set(null);
+}
+
+export function getQuickSlotSliderValue(): number {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return 0;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return 0;
+    const raw = get(settingsValues)[slot.id] ?? slot.default;
+    return ((raw - slot.min) / (slot.max - slot.min)) * 100;
+}
+
+export function setQuickSlotSliderValue(value: number) {
+    const idx = get(activeQuickSlot);
+    if (idx === null) return;
+    const slot = get(quickSlots)[idx];
+    if (!slot) return;
+    const actual = slot.min + (value / 100) * (slot.max - slot.min);
+    setSettingsParam(slot.id, actual);
 }
 
 // --- Latch ---
