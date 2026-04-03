@@ -36,6 +36,7 @@
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('pad'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('pad')) toggleSection('pad'); }}>Pad Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('acid'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('acid')) toggleSection('acid'); }}>Acid Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('lead'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('lead')) toggleSection('lead'); }}>Lead Synth</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('bass'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('bass')) toggleSection('bass'); }}>Bass Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('mix'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('mix')) toggleSection('mix'); }}>Mixer</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('sequencer'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('sequencer')) toggleSection('sequencer'); }}>Sequencer &amp; Recording</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('tips'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('tips')) toggleSection('tips'); }}>Tips &amp; Tricks</button></li>
@@ -53,13 +54,13 @@
             <div class="section-body">
                 <h3>What is ORBIT?</h3>
                 <p>
-                    ORBIT is a browser-based music production workstation that combines four
+                    ORBIT is a browser-based music production workstation that combines five
                     classic synthesiser and drum machine emulations into a single app. Everything
                     runs locally in your browser using WebAssembly — no server, no account, no
                     internet required after the initial load.
                 </p>
 
-                <h3>The Four Engines</h3>
+                <h3>The Five Engines</h3>
                 <div class="card-grid">
                     <div class="card" style="--card-accent: #378ADD">
                         <div class="card-label">DRUM</div>
@@ -77,6 +78,10 @@
                         <div class="card-label">LEAD</div>
                         <div class="card-desc">Braids modal synth with 13 models — from saw to cloud granular</div>
                     </div>
+                    <div class="card" style="--card-accent: #D4A843">
+                        <div class="card-label">BASS</div>
+                        <div class="card-desc">Korg Volca Bass style 3-VCO bass synth with diode filter and glide</div>
+                    </div>
                 </div>
 
                 <h3>First Launch</h3>
@@ -89,8 +94,8 @@
 
                 <h3>Navigation</h3>
                 <p>
-                    The tab bar at the top of the screen lets you switch panels instantly. The five tabs are
-                    <strong>DRUM</strong>, <strong>PAD</strong>, <strong>ACID</strong>, <strong>LEAD</strong>, and <strong>MIX</strong>.
+                    The tab bar at the top of the screen lets you switch panels instantly. The six tabs are
+                    <strong>DRUM</strong>, <strong>PAD</strong>, <strong>ACID</strong>, <strong>LEAD</strong>, <strong>BASS</strong>, and <strong>MIX</strong>.
                     A <strong>?</strong> button in the top-right opens this help page.
                 </p>
                 <p>
@@ -460,17 +465,173 @@
             </div>
         {/if}
     </section>
+    <!-- BASS SYNTH -->
+    <section id="bass" class="section">
+        <button class="section-header" onclick={() => toggleSection('bass')}>
+            <span class="section-number">06</span>
+            <span class="section-title">Bass Synth</span>
+            <span class="chevron" class:open={isOpen('bass')}>▸</span>
+        </button>
+        {#if isOpen('bass')}
+            <div class="section-body">
+                <p>
+                    The Bass panel emulates the <strong>Korg Volca Bass</strong> — a three-VCO
+                    analogue bass synthesiser with a diode bridge low-pass filter, built-in
+                    legato/glide, and flexible LFO modulation. It excels at thick unison basses,
+                    squelchy filter lines, and deep sub-bass tones.
+                </p>
+
+                <h3>Three VCOs</h3>
+                <p>
+                    The heart of the Bass synth is its three <strong>voltage-controlled oscillators</strong>.
+                    Each VCO can be configured independently via the settings panel:
+                </p>
+                <table>
+                    <thead><tr><th>Control</th><th>Options / Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>WAVE</td><td>SAW / SQR</td><td>Sawtooth (bright, buzzy) or Square (hollow, warm)</td></tr>
+                        <tr><td>PITCH</td><td>−12 to +12 semitones</td><td>Detune or transpose the VCO relative to the played note</td></tr>
+                        <tr><td>ACTIVE</td><td>On / Off</td><td>Toggle the VCO on or off</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    <strong>Tip:</strong> For a classic thick unison bass, keep all three VCOs on sawtooth
+                    and slightly detune VCO 2 and VCO 3 (e.g. +0.1 / −0.1 semitones). For interval
+                    stacking, try setting VCO 2 to +7 (a fifth) or VCO 3 to −12 (one octave down).
+                </p>
+
+                <h3>Parameters</h3>
+                <p>
+                    Four diamond-shaped controls select the active parameter for the horizontal slider:
+                </p>
+                <table>
+                    <thead><tr><th>Diamond</th><th>Parameter</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>C</td><td>Cutoff</td><td>Filter frequency (20–12,000 Hz)</td></tr>
+                        <tr><td>P</td><td>Peak</td><td>Filter resonance / emphasis (0–1.0)</td></tr>
+                        <tr><td>E</td><td>EG Int</td><td>How much the envelope sweeps the filter cutoff (0–1.0)</td></tr>
+                        <tr><td>L</td><td>LFO Rate</td><td>Speed of the low-frequency oscillator (0.1–30 Hz)</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Filter</h3>
+                <p>
+                    A <strong>diode bridge low-pass filter</strong> shapes the brightness of the
+                    sound. Turn up <strong>Peak</strong> for a resonant, squelchy character. The
+                    <strong>EG Int</strong> (envelope generator intensity) control determines how far
+                    the envelope sweeps the cutoff — higher values produce dramatic filter plucks on
+                    each note.
+                </p>
+
+                <h3>Envelope</h3>
+                <table>
+                    <thead><tr><th>Control</th><th>Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>ATTACK</td><td>0.5 ms – 10 s</td><td>How quickly the sound reaches full level after a note-on</td></tr>
+                        <tr><td>DEC/REL</td><td>10 ms – 10 s</td><td>Decay time (and release time) — how quickly the sound fades</td></tr>
+                        <tr><td>SUSTAIN</td><td>On / Off</td><td>When on, the note holds at full level until released</td></tr>
+                        <tr><td>EG→VCA</td><td>On / Off</td><td>Routes the envelope to the amplifier so it shapes volume, not just the filter</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>LFO</h3>
+                <p>
+                    The low-frequency oscillator adds movement and modulation to the sound:
+                </p>
+                <table>
+                    <thead><tr><th>Control</th><th>Options / Range</th><th>Effect</th></tr></thead>
+                    <tbody>
+                        <tr><td>RATE</td><td>0.1–30 Hz</td><td>Speed of the LFO cycle</td></tr>
+                        <tr><td>INT</td><td>0–1.0</td><td>Depth of the modulation effect</td></tr>
+                        <tr><td>WAVE</td><td>TRI / SQR</td><td>Triangle (smooth) or Square (stepped) LFO shape</td></tr>
+                        <tr><td>→ PITCH</td><td>On / Off</td><td>Modulates oscillator pitch — vibrato effect</td></tr>
+                        <tr><td>→ CUTOFF</td><td>On / Off</td><td>Modulates filter cutoff — wah / wobble effect</td></tr>
+                        <tr><td>→ AMP</td><td>On / Off</td><td>Modulates volume — tremolo effect</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Mode</h3>
+                <p>
+                    The <strong>GROUP</strong> setting toggles between two VCO assignment modes:
+                </p>
+                <ul>
+                    <li><strong>ALL (Unison)</strong>: All three VCOs play the same note in unison. The envelope retriggers on each new note for punchy, monophonic bass.</li>
+                    <li><strong>POLY (Paraphonic)</strong>: VCOs are assigned round-robin to incoming notes, allowing simple three-note polyphony. Useful for layered textures or split-chord effects.</li>
+                </ul>
+
+                <h3>Note Pads &amp; Transposition</h3>
+                <p>
+                    Eight pads represent notes in a C minor scale (C, D, E♭, F, G, A♭, B♭, C').
+                    Tapping a pad <strong>transposes the entire pattern</strong> by that interval.
+                    Use <strong>OCT−</strong> and <strong>OCT+</strong> to shift the pattern down or
+                    up by one octave.
+                </p>
+
+                <h3>Legato &amp; Glide</h3>
+                <p>
+                    When notes overlap (legato playing or tied sequencer steps with gate &gt; 100%),
+                    the Bass synth automatically applies a smooth <strong>portamento glide</strong>
+                    between pitches instead of retriggering the envelope. This creates the classic
+                    sliding bass effect heard in many electronic genres.
+                </p>
+
+                <h3>Step Sequencer</h3>
+                <p>
+                    A 16-step note sequencer (8 × 2 grid) works the same way as the PAD and LEAD
+                    sequencers. Tap a step to select it, double-tap to toggle its gate. Per-step
+                    controls include velocity, gate length, probability, ratchet, and skip. Use
+                    gate lengths above 100% to create tied/legato steps that engage the glide.
+                </p>
+
+                <h3>Sound Presets</h3>
+                <p>10 built-in sound presets covering a range of bass tones:</p>
+                <div class="preset-grid">
+                    <span class="preset-tag">Warm Unison</span>
+                    <span class="preset-tag">Sub Weight</span>
+                    <span class="preset-tag">Acid Bass</span>
+                    <span class="preset-tag">Deep Throb</span>
+                    <span class="preset-tag">Growl</span>
+                    <span class="preset-tag">Pulse Pad</span>
+                    <span class="preset-tag">Squelch Box</span>
+                    <span class="preset-tag">Fifth Stack</span>
+                    <span class="preset-tag">Haunted</span>
+                    <span class="preset-tag">Motorik</span>
+                </div>
+
+                <h3>Pattern Presets</h3>
+                <p>16 step-sequence patterns to get you started:</p>
+                <div class="preset-grid">
+                    <span class="preset-tag">House Foundation</span>
+                    <span class="preset-tag">Sub Weight</span>
+                    <span class="preset-tag">Dub Pressure</span>
+                    <span class="preset-tag">Techno Pulse</span>
+                    <span class="preset-tag">Motorik</span>
+                    <span class="preset-tag">Syncopated Funk</span>
+                    <span class="preset-tag">Acid Line</span>
+                    <span class="preset-tag">Squelch</span>
+                    <span class="preset-tag">Minor Walk</span>
+                    <span class="preset-tag">Octave Jump</span>
+                    <span class="preset-tag">Chromatic Descent</span>
+                    <span class="preset-tag">Unison Throb</span>
+                    <span class="preset-tag">Fifth Groove</span>
+                    <span class="preset-tag">Haunted</span>
+                    <span class="preset-tag">Growl Machine</span>
+                    <span class="preset-tag">Off Beat</span>
+                </div>
+            </div>
+        {/if}
+    </section>
     <!-- MIXER -->
     <section id="mix" class="section">
         <button class="section-header" onclick={() => toggleSection('mix')}>
-            <span class="section-number">06</span>
+            <span class="section-number">07</span>
             <span class="section-title">Mixer</span>
             <span class="chevron" class:open={isOpen('mix')}>▸</span>
         </button>
         {#if isOpen('mix')}
             <div class="section-body">
                 <p>
-                    The Mix panel gives you master control over all four engines with per-channel
+                    The Mix panel gives you master control over all five engines with per-channel
                     volume, panning, mute, and solo.
                 </p>
 
@@ -482,6 +643,7 @@
                         <tr><td>PAD</td><td><span class="colour-swatch" style="background:#E8944A"></span> Orange</td><td>75</td></tr>
                         <tr><td>ACID</td><td><span class="colour-swatch" style="background:#5DBE6E"></span> Green</td><td>75</td></tr>
                         <tr><td>LEAD</td><td><span class="colour-swatch" style="background:#B56ECC"></span> Purple</td><td>75</td></tr>
+                        <tr><td>BASS</td><td><span class="colour-swatch" style="background:#D4A843"></span> Gold</td><td>75</td></tr>
                     </tbody>
                 </table>
 
@@ -506,14 +668,14 @@
     <!-- SEQUENCER & RECORDING -->
     <section id="sequencer" class="section">
         <button class="section-header" onclick={() => toggleSection('sequencer')}>
-            <span class="section-number">07</span>
+            <span class="section-number">08</span>
             <span class="section-title">Sequencer &amp; Recording</span>
             <span class="chevron" class:open={isOpen('sequencer')}>▸</span>
         </button>
         {#if isOpen('sequencer')}
             <div class="section-body">
                 <p>
-                    The PAD and LEAD panels share a powerful multi-page note sequencer. Up to
+                    The PAD, LEAD, and BASS panels share a powerful multi-page note sequencer. Up to
                     <strong>8 pages × 16 steps = 128 steps</strong> can be programmed per instrument.
                 </p>
 
@@ -585,7 +747,7 @@
     <!-- TIPS & TRICKS -->
     <section id="tips" class="section">
         <button class="section-header" onclick={() => toggleSection('tips')}>
-            <span class="section-number">08</span>
+            <span class="section-number">09</span>
             <span class="section-title">Tips &amp; Tricks</span>
             <span class="chevron" class:open={isOpen('tips')}>▸</span>
         </button>
@@ -597,6 +759,7 @@
                     <li>Start with a <strong>drum groove</strong> — load a preset or build one from scratch.</li>
                     <li>Switch to the <strong>PAD</strong> tab and record a chord progression using the sequencer.</li>
                     <li>Add an <strong>acid bassline</strong> on the ACID tab — tweak cutoff and resonance for that classic squelch.</li>
+                    <li>Layer a <strong>deep bass</strong> on the BASS tab — use the 3-VCO unison for weight, or switch to POLY mode for simple chords.</li>
                     <li>Layer a <strong>lead melody</strong> on the LEAD tab — try different synthesis models for variety.</li>
                     <li>Open the <strong>MIX</strong> tab to balance volumes, pan channels, and use mute/solo to focus.</li>
                     <li>Press play and everything runs in sync!</li>
@@ -609,6 +772,8 @@
                     <li><strong>Plucked leads</strong>: Set the LEAD model to PLUK with short release for staccato plucked-string sounds.</li>
                     <li><strong>Thick swarms</strong>: Use the SWARM model on the LEAD panel and adjust Timbre to control the number of detuned voices.</li>
                     <li><strong>808 vs 909</strong>: Double-tap individual drum pads to mix engines — try a 909 kick with 808 hi-hats.</li>
+                    <li><strong>Unison detuning</strong>: On the BASS panel, keep all 3 VCOs on SAW and set VCO 2/3 pitch to ±0.1 for a fat, chorus-like bass. Increase the offset for a wilder detune.</li>
+                    <li><strong>Filter plucks</strong>: On the BASS panel, set a low cutoff, high EG Int, and short decay for punchy, plucky bass hits that cut through a mix.</li>
                 </ul>
 
                 <h3>Sequencer Techniques</h3>
@@ -635,7 +800,7 @@
     <!-- TECHNICAL SPECS -->
     <section id="specs" class="section">
         <button class="section-header" onclick={() => toggleSection('specs')}>
-            <span class="section-number">09</span>
+            <span class="section-number">10</span>
             <span class="section-title">Technical Specs</span>
             <span class="chevron" class:open={isOpen('specs')}>▸</span>
         </button>
@@ -656,6 +821,7 @@
                         <tr><td>PAD</td><td>Sequential Prophet-5</td><td>Rust → WASM (prophet-dsp.wasm)</td></tr>
                         <tr><td>ACID</td><td>Roland TB-303</td><td>Rust → WASM (tb303.wasm)</td></tr>
                         <tr><td>LEAD</td><td>Mutable Instruments Braids</td><td>Rust → WASM (braids-dsp.wasm)</td></tr>
+                        <tr><td>BASS</td><td>Korg Volca Bass</td><td>Rust → WASM (volca-bass.wasm)</td></tr>
                     </tbody>
                 </table>
 
@@ -670,6 +836,7 @@
                         <tr><td>Pad Preset</td><td>Warm Pad</td><td>14 presets</td></tr>
                         <tr><td>Acid Waveform</td><td>Sawtooth</td><td>SAW / SQR</td></tr>
                         <tr><td>Lead Model</td><td>SAW</td><td>13 models</td></tr>
+                        <tr><td>Bass Preset</td><td>Warm Unison</td><td>10 presets</td></tr>
                     </tbody>
                 </table>
 
