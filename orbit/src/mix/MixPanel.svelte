@@ -12,6 +12,7 @@
         { id: 'pad',  label: 'PAD',  colour: '#E8944A' },
         { id: 'acid', label: 'ACID', colour: '#5DBE6E' },
         { id: 'lead', label: 'LEAD', colour: '#B56ECC' },
+        { id: 'sampler', label: 'SMPL', colour: '#E05555' },
     ];
 
     function handleVolume(id: ChannelId, e: Event) {

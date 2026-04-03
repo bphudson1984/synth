@@ -29,7 +29,7 @@ jobs:
           key: ${{ runner.os }}-cargo-test-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run tests
-        run: cargo test -p dsp-common -p prophet-dsp -p braids-dsp -p tb303-dsp -p tr808-dsp -p tr909-dsp -p fx-dsp -p volca-bass-dsp -p audio-test-harness
+        run: cargo test -p dsp-common -p prophet-dsp -p braids-dsp -p tb303-dsp -p tr808-dsp -p tr909-dsp -p fx-dsp -p volca-bass-dsp -p sampler-dsp -p audio-test-harness
 
   build-and-deploy:
     name: Build WASM & Deploy
@@ -54,13 +54,14 @@ jobs:
 
       - name: Build WASM
         run: |
-          cargo build -p tr808-wasm -p prophet-wasm -p tb303-wasm -p braids-wasm -p fx-wasm -p volca-bass-wasm --target wasm32-unknown-unknown --release
+          cargo build -p tr808-wasm -p prophet-wasm -p tb303-wasm -p braids-wasm -p fx-wasm -p volca-bass-wasm -p sampler-wasm --target wasm32-unknown-unknown --release
           cp target/wasm32-unknown-unknown/release/tr808_wasm.wasm orbit/public/tr808.wasm
           cp target/wasm32-unknown-unknown/release/prophet_wasm.wasm orbit/public/prophet-dsp.wasm
           cp target/wasm32-unknown-unknown/release/tb303_wasm.wasm orbit/public/tb303.wasm
           cp target/wasm32-unknown-unknown/release/braids_wasm.wasm orbit/public/braids-dsp.wasm
           cp target/wasm32-unknown-unknown/release/fx_wasm.wasm orbit/public/fx-rack.wasm
           cp target/wasm32-unknown-unknown/release/volca_bass_wasm.wasm orbit/public/volca-bass.wasm
+          cp target/wasm32-unknown-unknown/release/sampler_wasm.wasm orbit/public/sampler.wasm
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

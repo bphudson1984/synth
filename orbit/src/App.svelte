@@ -9,6 +9,8 @@
     import { setLeadEngine } from './lead/stores/state';
     import { BassEngine } from './bass/audio/engine';
     import { setBassEngine } from './bass/stores/state';
+    import { SamplerEngine } from './sampler/audio/engine';
+    import { setSamplerEngine } from './sampler/stores/state';
     import { FxEngine } from './fx/audio/engine';
     import { setFxEngine, registerEngineSends } from './fx/stores/state';
     import DrumPanel from './drum/DrumPanel.svelte';
@@ -16,6 +18,7 @@
     import AcidPanel from './acid/AcidPanel.svelte';
     import LeadPanel from './lead/LeadPanel.svelte';
     import BassPanel from './bass/BassPanel.svelte';
+    import SamplerPanel from './sampler/SamplerPanel.svelte';
     import FxPanel from './fx/FxPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
     import HelpPanel from './help/HelpPanel.svelte';
@@ -23,7 +26,7 @@
     let started = $state(false);
     let loading = $state(false);
     let showHelp = $state(false);
-    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'bass' | 'fx' | 'mix'>('drum');
+    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'bass' | 'sampler' | 'fx' | 'mix'>('drum');
 
     function openHelp() {
         showHelp = true;
@@ -43,13 +46,15 @@
             const acidEngine = new AcidEngine();
             const leadEngine = new BraidsEngine();
             const bassEngine = new BassEngine();
+            const samplerEngine = new SamplerEngine();
             const fxEngine = new FxEngine();
-            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init(), bassEngine.init(), fxEngine.init()]);
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init(), bassEngine.init(), samplerEngine.init(), fxEngine.init()]);
             setDrumEngine(drumEngine);
             setPadEngine(padEngine);
             setAcidEngine(acidEngine);
             setLeadEngine(leadEngine);
             setBassEngine(bassEngine);
+            setSamplerEngine(samplerEngine);
             setFxEngine(fxEngine);
             // Connect send routing from each engine to the FX rack
             drumEngine.connectSends(fxEngine);
@@ -57,11 +62,13 @@
             acidEngine.connectSends(fxEngine);
             leadEngine.connectSends(fxEngine);
             bassEngine.connectSends(fxEngine);
+            samplerEngine.connectSends(fxEngine);
             registerEngineSends('drum', (i, l) => drumEngine.setSendLevel(i, l));
             registerEngineSends('pad', (i, l) => padEngine.setSendLevel(i, l));
             registerEngineSends('acid', (i, l) => acidEngine.setSendLevel(i, l));
             registerEngineSends('lead', (i, l) => leadEngine.setSendLevel(i, l));
             registerEngineSends('bass', (i, l) => bassEngine.setSendLevel(i, l));
+            registerEngineSends('sampler', (i, l) => samplerEngine.setSendLevel(i, l));
             started = true;
             loading = false;
         } catch (err) {
@@ -91,6 +98,7 @@
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
+            <button class="tab-btn" class:active={panel === 'sampler'} onclick={() => panel = 'sampler'}>SMPL</button>
             <button class="tab-btn" class:active={panel === 'fx'} onclick={() => panel = 'fx'}>FX</button>
             <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
         </nav>
@@ -104,6 +112,8 @@
             <LeadPanel />
         {:else if panel === 'bass'}
             <BassPanel />
+        {:else if panel === 'sampler'}
+            <SamplerPanel />
         {:else if panel === 'fx'}
             <FxPanel />
         {:else}

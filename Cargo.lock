@@ -1784,6 +1784,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "sampler-dsp"
+version = "0.1.0"
+dependencies = [
+ "audio-test-harness",
+ "dsp-common",
+]
+
+[[package]]
+name = "sampler-wasm"
+version = "0.1.0"
+dependencies = [
+ "dsp-common",
+ "sampler-dsp",
+]
+
+[[package]]
 name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
