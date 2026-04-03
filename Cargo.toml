@@ -4,6 +4,8 @@ members = [
     "crates/dsp-common",
     "crates/fx-dsp",
     "crates/fx-wasm",
+    "crates/volca-bass-dsp",
+    "crates/volca-bass-wasm",
     "crates/prophet-dsp",
     "crates/prophet-plugin",
     "crates/prophet-wasm",

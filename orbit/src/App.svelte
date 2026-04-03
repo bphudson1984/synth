@@ -7,19 +7,23 @@
     import { setAcidEngine } from './acid/stores/state';
     import { BraidsEngine } from './lead/audio/engine';
     import { setLeadEngine } from './lead/stores/state';
+    import { BassEngine } from './bass/audio/engine';
+    import { setBassEngine } from './bass/stores/state';
     import { FxEngine } from './fx/audio/engine';
     import { setFxEngine, registerEngineSends } from './fx/stores/state';
     import DrumPanel from './drum/DrumPanel.svelte';
     import PadPanel from './pad/PadPanel.svelte';
     import AcidPanel from './acid/AcidPanel.svelte';
     import LeadPanel from './lead/LeadPanel.svelte';
+    import BassPanel from './bass/BassPanel.svelte';
     import FxPanel from './fx/FxPanel.svelte';
     import MixPanel from './mix/MixPanel.svelte';
     import HelpPanel from './help/HelpPanel.svelte';
 
     let started = $state(false);
     let loading = $state(false);
-    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'fx' | 'mix'>('drum');
+    let showHelp = $state(false);
+    let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'bass' | 'fx' | 'mix'>('drum');
 
     function openHelp() {
         showHelp = true;
@@ -38,22 +42,26 @@
             const padEngine = new ProphetEngine();
             const acidEngine = new AcidEngine();
             const leadEngine = new BraidsEngine();
+            const bassEngine = new BassEngine();
             const fxEngine = new FxEngine();
-            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init(), fxEngine.init()]);
+            await Promise.all([drumEngine.init(), padEngine.init(), acidEngine.init(), leadEngine.init(), bassEngine.init(), fxEngine.init()]);
             setDrumEngine(drumEngine);
             setPadEngine(padEngine);
             setAcidEngine(acidEngine);
             setLeadEngine(leadEngine);
+            setBassEngine(bassEngine);
             setFxEngine(fxEngine);
             // Connect send routing from each engine to the FX rack
             drumEngine.connectSends(fxEngine);
             padEngine.connectSends(fxEngine);
             acidEngine.connectSends(fxEngine);
             leadEngine.connectSends(fxEngine);
+            bassEngine.connectSends(fxEngine);
             registerEngineSends('drum', (i, l) => drumEngine.setSendLevel(i, l));
             registerEngineSends('pad', (i, l) => padEngine.setSendLevel(i, l));
             registerEngineSends('acid', (i, l) => acidEngine.setSendLevel(i, l));
             registerEngineSends('lead', (i, l) => leadEngine.setSendLevel(i, l));
+            registerEngineSends('bass', (i, l) => bassEngine.setSendLevel(i, l));
             started = true;
             loading = false;
         } catch (err) {
@@ -79,6 +87,7 @@
     <div class="app">
         <nav class="panel-tabs">
             <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
+            <button class="tab-btn" class:active={panel === 'bass'} onclick={() => panel = 'bass'}>BASS</button>
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
@@ -93,6 +102,8 @@
             <AcidPanel />
         {:else if panel === 'lead'}
             <LeadPanel />
+        {:else if panel === 'bass'}
+            <BassPanel />
         {:else if panel === 'fx'}
             <FxPanel />
         {:else}
@@ -194,16 +205,17 @@
 
     .panel-tabs {
         display: flex;
-        justify-content: center;
         gap: 0;
-        padding: 8px 24px 4px;
+        padding: 8px 16px 4px;
+        flex-shrink: 0;
     }
     .tab-btn {
-        padding: 4px 16px;
+        flex: 1;
+        padding: 6px 0;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
         background: transparent;
         color: var(--orbit-hint, #666);
@@ -212,8 +224,8 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .tab-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
-    .tab-btn:not(:first-child):not(.tab-last) { border-radius: 0; border-right: none; }
-    .tab-btn.tab-last { border-radius: 0 12px 12px 0; }
+    .tab-btn:not(:first-child):not(:last-child) { border-radius: 0; border-right: none; }
+    .tab-btn:last-child { border-radius: 0 12px 12px 0; }
     .tab-btn.active {
         background: var(--orbit-ink, #eee);
         color: var(--orbit-surface, #111);
