@@ -56,6 +56,7 @@
 
     const CHANNELS: { id: ChannelId; label: string; colour: string }[] = [
         { id: 'drum', label: 'DR', colour: '#378ADD' },
+        { id: 'bass', label: 'BS', colour: '#D4A843' },
         { id: 'pad',  label: 'PD', colour: '#E8944A' },
         { id: 'acid', label: 'AC', colour: '#5DBE6E' },
         { id: 'lead', label: 'LD', colour: '#B56ECC' },

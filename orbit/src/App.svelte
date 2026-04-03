@@ -87,10 +87,10 @@
     <div class="app">
         <nav class="panel-tabs">
             <button class="tab-btn" class:active={panel === 'drum'} onclick={() => panel = 'drum'}>DRUM</button>
+            <button class="tab-btn" class:active={panel === 'bass'} onclick={() => panel = 'bass'}>BASS</button>
             <button class="tab-btn" class:active={panel === 'pad'} onclick={() => panel = 'pad'}>PAD</button>
             <button class="tab-btn" class:active={panel === 'acid'} onclick={() => panel = 'acid'}>ACID</button>
             <button class="tab-btn" class:active={panel === 'lead'} onclick={() => panel = 'lead'}>LEAD</button>
-            <button class="tab-btn" class:active={panel === 'bass'} onclick={() => panel = 'bass'}>BASS</button>
             <button class="tab-btn" class:active={panel === 'fx'} onclick={() => panel = 'fx'}>FX</button>
             <button class="tab-btn" class:active={panel === 'mix'} onclick={() => panel = 'mix'}>MIX</button>
         </nav>
@@ -205,16 +205,17 @@
 
     .panel-tabs {
         display: flex;
-        justify-content: center;
         gap: 0;
-        padding: 8px 24px 4px;
+        padding: 8px 16px 4px;
+        flex-shrink: 0;
     }
     .tab-btn {
-        padding: 4px 16px;
+        flex: 1;
+        padding: 6px 0;
         font-family: 'JetBrains Mono', monospace;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         text-transform: uppercase;
         background: transparent;
         color: var(--orbit-hint, #666);
@@ -223,8 +224,8 @@
         transition: all 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
     }
     .tab-btn:first-child { border-radius: 12px 0 0 12px; border-right: none; }
-    .tab-btn:not(:first-child):not(.tab-last) { border-radius: 0; border-right: none; }
-    .tab-btn.tab-last { border-radius: 0 12px 12px 0; }
+    .tab-btn:not(:first-child):not(:last-child) { border-radius: 0; border-right: none; }
+    .tab-btn:last-child { border-radius: 0 12px 12px 0; }
     .tab-btn.active {
         background: var(--orbit-ink, #eee);
         color: var(--orbit-surface, #111);

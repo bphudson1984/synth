@@ -8,10 +8,10 @@
 
     const STRIPS: { id: ChannelId; label: string; colour: string }[] = [
         { id: 'drum', label: 'DRUM', colour: '#378ADD' },
+        { id: 'bass', label: 'BASS', colour: '#D4A843' },
         { id: 'pad',  label: 'PAD',  colour: '#E8944A' },
         { id: 'acid', label: 'ACID', colour: '#5DBE6E' },
         { id: 'lead', label: 'LEAD', colour: '#B56ECC' },
-        { id: 'bass', label: 'BASS', colour: '#D4A843' },
     ];
 
     function handleVolume(id: ChannelId, e: Event) {

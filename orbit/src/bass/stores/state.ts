@@ -37,6 +37,23 @@ export function setBassEngine(e: BassEngine) {
     registerMixerCallback('bass', (gain) => { engine?.setParam(PARAM.VOLUME, gain); }, (pan) => { engine?.setPan(pan); });
 }
 
+// Note triggering
+let activeNote: number | null = null;
+
+export function triggerNote(note: number) {
+    if (activeNote !== null) engine?.noteOff(activeNote);
+    engine?.noteOn(note, 127);
+    activeNote = note;
+    // Auto-release after 1.2s if not held by sequencer
+    const noteToRelease = note;
+    setTimeout(() => {
+        if (activeNote === noteToRelease) {
+            engine?.noteOff(noteToRelease);
+            activeNote = null;
+        }
+    }, 1200);
+}
+
 // Preset
 export const currentPresetIndex = writable(0);
 
@@ -123,6 +140,7 @@ export function loadPreset(index: number) {
     const preset = PRESETS[index];
     if (!preset || !engine) return;
     currentPresetIndex.set(index);
+    // Load synth params
     for (const [id, value] of preset.params) {
         engine.setParam(id, value);
     }
@@ -132,6 +150,26 @@ export function loadPreset(index: number) {
         }
         return { ...v };
     });
+    // Load step sequence
+    if (preset.steps && preset.steps.length > 0) {
+        bassSeq.clearSequence();
+        const steps = preset.steps.map(s => ({ ...s, notes: [...s.notes] }));
+        bassSeq.seqSteps.set(steps);
+        for (let i = 0; i < steps.length; i++) {
+            const s = steps[i];
+            if (s.gate) {
+                engine.setStepNotes(i, s.notes);
+                engine.setStepGate(i, true);
+                engine.setStepVelocity(i, Math.round(s.velocity * 1.27));
+                engine.setStepGatePct(i, s.gatePct);
+                engine.setStepProbability(i, s.probability);
+                engine.setStepRatchet(i, s.ratchet);
+                if (s.skip) engine.setStepSkip(i, true);
+            } else {
+                engine.setStepGate(i, false);
+            }
+        }
+    }
 }
 
 // Sequence bank

@@ -2,13 +2,14 @@
     import { NOTE_PADS, BASS_SETTINGS } from './constants';
     import { PRESETS } from './presets';
     import {
-        currentPresetIndex, currentTranspose,
+        currentPresetIndex,
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
+        triggerNote,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
         setQuickSlotSliderValue,
         bassSequenceBank, currentBassSequenceIndex, bassChainMode, bassRandomMode,
         bassSeq,
-        transposePattern, loadPreset,
+        loadPreset,
         switchBassSequence, addBassSequence, duplicateBassSequence, deleteBassSequence, toggleBassChain, toggleBassRandom,
     } from './stores/state';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
@@ -26,7 +27,6 @@
     const BASS_COLOUR = '#D4A843';
 
     $: presetIdx = $currentPresetIndex;
-    $: transpose = $currentTranspose;
     $: seqBank = $bassSequenceBank;
     $: seqIdx = $currentBassSequenceIndex;
     $: chain = $bassChainMode;
@@ -44,19 +44,19 @@
     $: seqOpen = $seqOpenStore;
     $: stepOpen = $stepOpenStore;
 
-    $: activePadIndex = NOTE_PADS.findIndex(p => p.semitones === transpose);
+    $: activePadIndex = -1;
     const triggeredPad = writable(new Set<number>());
     $: triggered = $triggeredPad;
 
     let pressStartStep = -1;
 
     function handlePadDown(i: number) {
-        transposePattern(NOTE_PADS[i].semitones);
+        const pad = NOTE_PADS[i];
+        triggerNote(36 + pad.semitones);
         triggeredPad.set(new Set([i]));
         setTimeout(() => { triggeredPad.set(new Set()); }, 120);
 
         if (!get(isRecording)) return;
-        const pad = NOTE_PADS[i];
         if (get(isPlaying)) {
             pressStartStep = get(bassSeq.seqCurrentStep);
             bassSeq.setStepFromNotes(pressStartStep, [36 + pad.semitones], pad.label);
