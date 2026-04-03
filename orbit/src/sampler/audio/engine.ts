@@ -1,14 +1,6 @@
 import { BaseEngine } from '../../shared/audio/BaseEngine';
 import { getAudioContext } from '../../shared/audio/context';
 
-export const PAD_PARAM = {
-    VOLUME: 0,
-    PITCH: 1,
-    PLAY_MODE: 2,
-    CHOKE_GROUP: 3,
-    REVERSE: 4,
-} as const;
-
 export class SamplerEngine extends BaseEngine {
     async init(): Promise<void> {
         await this.initWorklet('sampler-processor', 'sampler.wasm');

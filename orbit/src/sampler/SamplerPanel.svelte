@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { SAMPLER_PADS, SAMPLER_SETTINGS, SAMPLER_COLOUR } from './constants';
+    import { SAMPLER_PADS, SAMPLER_SETTINGS, SAMPLER_COLOUR, PAD_PARAM } from './constants';
     import {
         padStates, selectedPad, settingsOpen, padSettings,
         isRecordingMic, startMicRecording, stopMicRecording,
@@ -7,8 +7,8 @@
         samplerSeq, samplerSequenceBank, currentSequenceIndex,
         samplerChainMode, samplerRandomMode,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
-        setQuickSlotSliderValue, getSelectedPadSettings,
-        selectPad, toggleSettings, triggerPad, loadSampleFile,
+        setQuickSlotSliderValue,
+        selectPad, toggleSettings, triggerPad, releasePad, loadSampleFile,
         setSelectedPadParam,
         switchSequence, addSequence, duplicateSequence, deleteSequence,
         toggleSamplerChain, toggleSamplerRandom,
@@ -38,7 +38,8 @@
     $: slots = $quickSlots;
     $: activeSlot = $activeQuickSlot;
     $: activeSlotParam = activeSlot !== null ? slots[activeSlot] : null;
-    $: selectedPadVals = getSelectedPadSettings();
+    $: allPadSettings = $padSettings;
+    $: selectedPadVals = { ...(allPadSettings[selPad] ?? {}) };
     $: qsLabel = activeSlotParam?.name ?? '';
     $: qsValue = activeSlotParam
         ? ((selectedPadVals[activeSlotParam.id] ?? activeSlotParam.default) - activeSlotParam.min) / (activeSlotParam.max - activeSlotParam.min) * 100
@@ -69,7 +70,9 @@
         }
     }
 
-    function handlePadClick(_i: number, _durationMs: number) {}
+    function handlePadClick(i: number, _durationMs: number) {
+        releasePad(i);
+    }
 
     // File drop handling
     function handleDrop(e: DragEvent) {
@@ -119,6 +122,10 @@
             waveform={pads[selPad].waveform}
             colour={SAMPLER_COLOUR}
             name={pads[selPad].name}
+            startPct={selectedPadVals[PAD_PARAM.START] ?? 0}
+            endPct={selectedPadVals[PAD_PARAM.END] ?? 1}
+            onStartChange={(v) => setSelectedPadParam(PAD_PARAM.START, v)}
+            onEndChange={(v) => setSelectedPadParam(PAD_PARAM.END, v)}
         />
         {#if seqOpen}
             <div class="drawer-row"><SeqSettingsRow colour={SAMPLER_COLOUR} seq={samplerSeq} /></div>

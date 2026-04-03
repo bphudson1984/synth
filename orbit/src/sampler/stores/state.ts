@@ -2,7 +2,7 @@ import { writable, get } from 'svelte/store';
 import { NUM_PADS, SAMPLER_SETTINGS } from '../constants';
 import { NUM_QUICK_SLOTS, type QuickSlot, type SettingsParam } from '../../shared/types/settings';
 import type { SamplerEngine } from '../audio/engine';
-import { PAD_PARAM } from '../audio/engine';
+import { PAD_PARAM } from '../constants';
 import { bpm } from '../../shared/stores/transport';
 import { registerMixerCallback } from '../../shared/stores/mixer';
 import { createNoteSequencerStore } from '../../shared/stores/noteSequencer';
@@ -30,14 +30,30 @@ export const selectedPad = writable(0);
 export const settingsOpen = writable(false);
 
 // Per-pad settings values (keyed by pad index, then param id)
-export const padSettings = writable<Record<number, Record<number, number>>>(
-    Object.fromEntries(Array.from({ length: NUM_PADS }, (_, i) => [i, {
+function defaultPadSettings(): Record<number, number> {
+    return {
         [PAD_PARAM.VOLUME]: 1.0,
         [PAD_PARAM.PITCH]: 0,
         [PAD_PARAM.PLAY_MODE]: 0,
         [PAD_PARAM.CHOKE_GROUP]: 0,
         [PAD_PARAM.REVERSE]: 0,
-    }]))
+        [PAD_PARAM.PAN]: 0,
+        [PAD_PARAM.ATTACK]: 0.002,
+        [PAD_PARAM.RELEASE]: 0.005,
+        [PAD_PARAM.START]: 0,
+        [PAD_PARAM.END]: 1,
+        [PAD_PARAM.BIT_DEPTH]: 16,
+        [PAD_PARAM.VOCODER_ON]: 0,
+        [PAD_PARAM.VOCODER_ROOT]: 60,
+        [PAD_PARAM.VOCODER_CARRIER]: 0,
+        [PAD_PARAM.VOCODER_BANDS]: 12,
+        [PAD_PARAM.VOCODER_FORMANT]: 0,
+        [PAD_PARAM.VOCODER_MIX]: 1,
+    };
+}
+
+export const padSettings = writable<Record<number, Record<number, number>>>(
+    Object.fromEntries(Array.from({ length: NUM_PADS }, (_, i) => [i, defaultPadSettings()]))
 );
 
 // Sequence bank
@@ -205,12 +221,6 @@ export function setPadParam(padIndex: number, paramId: number, value: number) {
 export function setSelectedPadParam(paramId: number, value: number) {
     const pad = get(selectedPad);
     setPadParam(pad, paramId, value);
-}
-
-// Get settings values for the selected pad (for SynthSettings component)
-export function getSelectedPadSettings(): Record<number, number> {
-    const pad = get(selectedPad);
-    return get(padSettings)[pad] ?? {};
 }
 
 // Quick slots

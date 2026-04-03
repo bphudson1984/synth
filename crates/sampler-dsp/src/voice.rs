@@ -1,3 +1,5 @@
+use crate::vocoder::Vocoder;
+
 /// Hermite cubic interpolation for high-quality pitched sample playback.
 #[inline(always)]
 fn cubic(y0: f32, y1: f32, y2: f32, y3: f32, frac: f32) -> f32 {
@@ -39,10 +41,23 @@ pub struct SampleSlot {
     pub length: usize,
     pub sample_rate: f32,
     pub volume: f32,
+    pub pan: f32,          // -1 (left) to +1 (right)
     pub pitch: f32,        // semitones (-24 to +24)
     pub reverse: bool,
     pub play_mode: PlayMode,
     pub choke_group: u8,   // 0=none, 1-4
+    pub attack: f32,       // seconds (0-2)
+    pub release: f32,      // seconds (0-2)
+    pub start_pct: f32,    // 0-1 (start point as fraction of sample)
+    pub end_pct: f32,      // 0-1 (end point as fraction of sample)
+    pub bit_depth: f32,    // 1-16 (16 = clean, lower = more crushed)
+    // Vocoder settings (stored per-pad, applied to voice on trigger)
+    pub vocoder_enabled: bool,
+    pub vocoder_root_note: u8,     // MIDI note the sample is tuned to
+    pub vocoder_carrier: u8,       // 0=saw, 1=square, 2=noise
+    pub vocoder_bands: u8,         // 4-16
+    pub vocoder_formant: f32,      // -12 to +12 semitones
+    pub vocoder_mix: f32,          // 0-1
     pub loaded: bool,
 }
 
@@ -54,10 +69,22 @@ impl SampleSlot {
             length: 0,
             sample_rate: 48000.0,
             volume: 1.0,
+            pan: 0.0,
             pitch: 0.0,
             reverse: false,
             play_mode: PlayMode::OneShot,
             choke_group: 0,
+            attack: 0.002,
+            release: 0.005,
+            start_pct: 0.0,
+            end_pct: 1.0,
+            bit_depth: 16.0,
+            vocoder_enabled: false,
+            vocoder_root_note: 60,
+            vocoder_carrier: 0,
+            vocoder_bands: 12,
+            vocoder_formant: 0.0,
+            vocoder_mix: 1.0,
             loaded: false,
         }
     }
@@ -120,13 +147,22 @@ pub struct SampleVoice {
     pub playing: bool,
     pub pad_index: u8,
     volume: f32,
-    // Click-free AR envelope
+    pan: f32,
+    // AR envelope with configurable times
     env_value: f32,
     env_stage: EnvStage,
     attack_coeff: f32,
     release_coeff: f32,
+    // Start/end bounds (in frames)
+    start_frame: f64,
+    end_frame: f64,
+    play_mode: PlayMode,
+    looping: bool,
+    // Vocoder
+    pub vocoder: Vocoder,
     // For voice stealing: monotonic counter
     pub start_order: u64,
+    sample_rate: f32,
 }
 
 impl SampleVoice {
@@ -137,28 +173,56 @@ impl SampleVoice {
             playing: false,
             pad_index: 0,
             volume: 1.0,
+            pan: 0.0,
             env_value: 0.0,
             env_stage: EnvStage::Idle,
-            attack_coeff: env_coeff(0.002, sample_rate),  // 2ms attack
-            release_coeff: env_coeff(0.005, sample_rate),  // 5ms release
+            attack_coeff: env_coeff(0.002, sample_rate),
+            release_coeff: env_coeff(0.005, sample_rate),
+            start_frame: 0.0,
+            end_frame: 0.0,
+            play_mode: PlayMode::OneShot,
+            looping: false,
+            vocoder: Vocoder::new(sample_rate),
             start_order: 0,
+            sample_rate,
         }
     }
 
-    pub fn start(&mut self, pad: u8, volume: f32, pitch_rate: f64, order: u64) {
+    pub fn start(&mut self, pad: u8, slot: &SampleSlot, pitch_rate: f64, order: u64) {
         self.pad_index = pad;
-        self.volume = volume;
+        self.volume = slot.volume;
+        self.pan = slot.pan;
         self.rate = pitch_rate;
-        self.position = 0.0;
+        self.start_frame = (slot.start_pct * slot.length as f32) as f64;
+        self.end_frame = (slot.end_pct * slot.length as f32) as f64;
+        self.position = self.start_frame;
+        self.play_mode = slot.play_mode;
+        self.looping = slot.play_mode == PlayMode::Loop;
         self.playing = true;
         self.env_value = 0.0;
         self.env_stage = EnvStage::Attack;
+        self.attack_coeff = env_coeff(slot.attack, self.sample_rate);
+        self.release_coeff = env_coeff(slot.release, self.sample_rate);
+        // Configure vocoder from slot
+        self.vocoder.enabled = slot.vocoder_enabled;
+        if slot.vocoder_enabled {
+            self.vocoder.carrier_wave = slot.vocoder_carrier;
+            self.vocoder.set_num_bands(slot.vocoder_bands as usize);
+            self.vocoder.set_formant_shift(slot.vocoder_formant);
+            self.vocoder.mix = slot.vocoder_mix;
+            self.vocoder.root_note = slot.vocoder_root_note;
+            // Carrier pitch = the note being played (set by engine)
+            self.vocoder.clear();
+        }
         self.start_order = order;
     }
 
     pub fn release(&mut self) {
+        // One-shot ignores release — plays to end
+        if self.play_mode == PlayMode::OneShot { return; }
         if self.env_stage != EnvStage::Idle {
             self.env_stage = EnvStage::Release;
+            self.looping = false;
         }
     }
 
@@ -194,30 +258,49 @@ impl SampleVoice {
         }
 
         // Read sample
-        let (l, r) = if slot.reverse {
+        let (mut l, mut r) = if slot.reverse {
             slot.read_reverse(self.position)
         } else {
             slot.read(self.position)
         };
 
+        // Bit crush: quantize to fewer bits (16 = clean, 1 = extreme)
+        if slot.bit_depth < 15.9 {
+            let steps = (2.0f32).powf(slot.bit_depth);
+            l = (l * steps).round() / steps;
+            r = (r * steps).round() / steps;
+        }
+
+        // Vocoder: process mono sum through vocoder, then re-pan
+        if self.vocoder.enabled {
+            let mono = (l + r) * 0.5;
+            let vocoded = self.vocoder.process(mono);
+            l = vocoded;
+            r = vocoded;
+        }
+
         // Advance position
         self.position += self.rate;
 
-        // Check end of sample
-        if self.position >= slot.length as f64 {
-            match slot.play_mode {
-                PlayMode::OneShot | PlayMode::Gate => {
-                    self.stop();
-                    return (l * self.volume * self.env_value, r * self.volume * self.env_value);
-                }
-                PlayMode::Loop => {
-                    self.position -= slot.length as f64;
-                }
+        // Check end of sample (use end_frame from start/end points)
+        let end = if self.end_frame > self.start_frame { self.end_frame } else { slot.length as f64 };
+        if self.position >= end {
+            if self.looping {
+                self.position = self.start_frame;
+            } else {
+                self.stop();
+                let gain = self.volume * self.env_value;
+                let pan_l = (1.0 - self.pan).min(1.0);
+                let pan_r = (1.0 + self.pan).min(1.0);
+                return (l * gain * pan_l, r * gain * pan_r);
             }
         }
 
         let gain = self.volume * self.env_value;
-        (l * gain, r * gain)
+        // Constant-power-ish pan
+        let pan_l = (1.0 - self.pan).min(1.0);
+        let pan_r = (1.0 + self.pan).min(1.0);
+        (l * gain * pan_l, r * gain * pan_r)
     }
 }
 
@@ -247,7 +330,7 @@ mod tests {
     fn test_voice_plays_and_stops() {
         let slot = make_sine_slot(440.0, 0.1, 44100.0);
         let mut voice = SampleVoice::new(44100.0);
-        voice.start(0, 1.0, 1.0, 1);
+        voice.start(0, &slot, 1.0, 1);
 
         let mut has_audio = false;
         for _ in 0..4410 {
@@ -268,7 +351,7 @@ mod tests {
         let mut slot = make_sine_slot(440.0, 0.01, 44100.0); // very short
         slot.play_mode = PlayMode::Loop;
         let mut voice = SampleVoice::new(44100.0);
-        voice.start(0, 1.0, 1.0, 1);
+        voice.start(0, &slot, 1.0, 1);
 
         // Process way more samples than the buffer length
         for _ in 0..44100 {
@@ -282,7 +365,7 @@ mod tests {
         let mut slot = make_sine_slot(440.0, 1.0, 44100.0);
         slot.play_mode = PlayMode::Gate;
         let mut voice = SampleVoice::new(44100.0);
-        voice.start(0, 1.0, 1.0, 1);
+        voice.start(0, &slot, 1.0, 1);
 
         // Play for a bit
         for _ in 0..4410 {
@@ -303,7 +386,7 @@ mod tests {
         let slot = make_sine_slot(440.0, 0.5, 44100.0);
         let mut voice = SampleVoice::new(44100.0);
         // 2x rate = plays in half the time
-        voice.start(0, 1.0, 2.0, 1);
+        voice.start(0, &slot, 2.0, 1);
 
         let mut count = 0;
         while voice.playing && count < 100000 {
@@ -318,7 +401,7 @@ mod tests {
     fn test_reverse_playback() {
         let slot = make_slot(1000, 44100.0);
         let mut voice = SampleVoice::new(44100.0);
-        voice.start(0, 1.0, 1.0, 1);
+        voice.start(0, &slot, 1.0, 1);
 
         // Forward: first samples should be near 0 (ramp starts at 0)
         let (l_fwd, _) = slot.read(10.0);

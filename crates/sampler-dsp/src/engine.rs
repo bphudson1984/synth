@@ -45,7 +45,8 @@ impl Sampler {
     }
 
     /// Trigger a pad — start playing its sample.
-    pub fn trigger(&mut self, pad: u8) {
+    /// `note` is the MIDI note for vocoder carrier pitch (defaults to pad's root note).
+    pub fn trigger_with_note(&mut self, pad: u8, note: u8) {
         let pad_idx = pad as usize;
         if pad_idx >= MAX_PADS || !self.pads[pad_idx].loaded { return; }
 
@@ -72,7 +73,19 @@ impl Sampler {
         self.voice_counter += 1;
         let voice_idx = self.allocate_voice();
         let voice = &mut self.voices[voice_idx];
-        voice.start(pad, slot.volume, rate, self.voice_counter);
+        voice.start(pad, slot, rate, self.voice_counter);
+        // Set vocoder carrier pitch to the played note
+        if slot.vocoder_enabled {
+            voice.vocoder.set_note(note);
+        }
+    }
+
+    /// Trigger a pad with its default root note.
+    pub fn trigger(&mut self, pad: u8) {
+        let root = if (pad as usize) < MAX_PADS {
+            self.pads[pad as usize].vocoder_root_note
+        } else { 60 };
+        self.trigger_with_note(pad, root);
     }
 
     /// Release a pad (for Gate mode).
@@ -104,6 +117,19 @@ impl Sampler {
             2 => slot.play_mode = PlayMode::from_u8(value as u8),
             3 => slot.choke_group = (value as u8).min(4),
             4 => slot.reverse = value > 0.5,
+            5 => slot.pan = value.clamp(-1.0, 1.0),
+            6 => slot.attack = value.clamp(0.0, 2.0),
+            7 => slot.release = value.clamp(0.0, 2.0),
+            8 => slot.start_pct = value.clamp(0.0, 1.0),
+            9 => slot.end_pct = value.clamp(0.0, 1.0),
+            10 => slot.bit_depth = value.clamp(1.0, 16.0),
+            // Vocoder params
+            11 => slot.vocoder_enabled = value > 0.5,
+            12 => slot.vocoder_root_note = (value as u8).clamp(0, 127),
+            13 => slot.vocoder_carrier = (value as u8).clamp(0, 2),
+            14 => slot.vocoder_bands = (value as u8).clamp(4, 16),
+            15 => slot.vocoder_formant = value.clamp(-12.0, 12.0),
+            16 => slot.vocoder_mix = value.clamp(0.0, 1.0),
             _ => {}
         }
     }
@@ -116,21 +142,24 @@ impl Sampler {
             self.sequencer.process(&mut self.events);
             // Collect trigger pads first to avoid borrow conflict
             let mut trigger_pads: [u8; 16] = [0; 16];
+            let mut trigger_notes: [u8; 16] = [0; 16];
             let mut trigger_count = 0usize;
             for event in &self.events {
                 if let NoteSeqEvent::NoteOn { notes, num_notes, .. } = event {
                     let n = (*num_notes as usize).min(notes.len());
                     for i in 0..n {
-                        let pad = notes[i].saturating_sub(36);
+                        let note = notes[i];
+                        let pad = note.saturating_sub(36);
                         if (pad as usize) < MAX_PADS && trigger_count < 16 {
                             trigger_pads[trigger_count] = pad;
+                            trigger_notes[trigger_count] = note;
                             trigger_count += 1;
                         }
                     }
                 }
             }
             for i in 0..trigger_count {
-                self.trigger(trigger_pads[i]);
+                self.trigger_with_note(trigger_pads[i], trigger_notes[i]);
             }
         }
 
@@ -189,7 +218,8 @@ impl MelodicEngine for Sampler {
     fn note_on(&mut self, note: u8, _velocity: u8) {
         let pad = note.saturating_sub(36);
         if (pad as usize) < MAX_PADS {
-            self.trigger(pad);
+            // Pass the MIDI note to the vocoder for carrier pitch
+            self.trigger_with_note(pad, note);
         }
     }
 
