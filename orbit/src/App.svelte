@@ -19,6 +19,7 @@
 
     let started = $state(false);
     let loading = $state(false);
+    let showHelp = $state(false);
     let panel = $state<'drum' | 'pad' | 'acid' | 'lead' | 'fx' | 'mix'>('drum');
 
     function openHelp() {
