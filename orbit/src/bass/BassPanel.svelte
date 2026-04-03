@@ -1,15 +1,15 @@
 <script lang="ts">
     import { NOTE_PADS, BASS_SETTINGS } from './constants';
-    import { PRESETS } from './presets';
+    import { SOUND_PRESETS, PATTERN_PRESETS } from './presets';
     import {
-        currentPresetIndex,
+        currentSoundPreset, currentPatternPreset,
         settingsOpen, settingsValues, toggleSettings, setSettingsParam,
         triggerNote,
         quickSlots, activeQuickSlot, assignQuickSlot, selectQuickSlot,
         setQuickSlotSliderValue,
         bassSequenceBank, currentBassSequenceIndex, bassChainMode, bassRandomMode,
         bassSeq,
-        loadPreset,
+        loadSoundPreset, loadPatternPreset,
         switchBassSequence, addBassSequence, duplicateBassSequence, deleteBassSequence, toggleBassChain, toggleBassRandom,
     } from './stores/state';
     import { isPlaying, isRecording, bpm } from '../shared/stores/transport';
@@ -26,7 +26,8 @@
 
     const BASS_COLOUR = '#D4A843';
 
-    $: presetIdx = $currentPresetIndex;
+    $: soundIdx = $currentSoundPreset;
+    $: patternIdx = $currentPatternPreset;
     $: seqBank = $bassSequenceBank;
     $: seqIdx = $currentBassSequenceIndex;
     $: chain = $bassChainMode;
@@ -80,15 +81,23 @@
         pressStartStep = -1;
     }
 
-    function handlePresetChange(e: Event) {
-        loadPreset(Number((e.target as HTMLSelectElement).value));
+    function handleSoundChange(e: Event) {
+        loadSoundPreset(Number((e.target as HTMLSelectElement).value));
+    }
+    function handlePatternChange(e: Event) {
+        loadPatternPreset(Number((e.target as HTMLSelectElement).value));
     }
 </script>
 
 <div class="bass-panel">
     <div class="top-bar">
-        <select class="top-select" value={presetIdx} onchange={handlePresetChange}>
-            {#each PRESETS as preset, i}
+        <select class="top-select" value={soundIdx} onchange={handleSoundChange}>
+            {#each SOUND_PRESETS as preset, i}
+                <option value={i}>{preset.name}</option>
+            {/each}
+        </select>
+        <select class="top-select" value={patternIdx} onchange={handlePatternChange}>
+            {#each PATTERN_PRESETS as preset, i}
                 <option value={i}>{preset.name}</option>
             {/each}
         </select>
