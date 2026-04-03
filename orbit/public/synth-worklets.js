@@ -141,6 +141,119 @@ createSynthProcessor('braids-processor', melodicSeqHandler);
 
 createSynthProcessor('volca-bass-processor', melodicSeqHandler);
 
+// --- Sampler processor (custom: handles sample data loading + melodic seq) ---
+
+class SamplerProcessor extends AudioWorkletProcessor {
+    constructor() {
+        super();
+        this.wasm = null;
+        this.ready = false;
+        this.lastStep = -1;
+        this.memoryBuf = null;
+        this.memoryView = null;
+        this.port.onmessage = (e) => this.handleMessage(e.data);
+    }
+
+    handleMessage(data) {
+        if (!this.ready && data.type !== 'wasm-bytes') return;
+
+        switch (data.type) {
+            case 'wasm-bytes':
+                WebAssembly.instantiate(data.bytes, {}).then(result => {
+                    this.wasm = result.instance.exports;
+                    this.wasm.init(sampleRate);
+                    this.memoryBuf = this.wasm.memory.buffer;
+                    this.memoryView = new Float32Array(this.memoryBuf);
+                    this.ready = true;
+                    this.port.postMessage({ type: 'ready' });
+                }).catch(err => {
+                    this.port.postMessage({ type: 'error', message: err.message });
+                });
+                break;
+
+            // Sample loading: allocate WASM buffer, copy data, register
+            case 'load-sample': {
+                const left = new Float32Array(data.left);
+                const right = new Float32Array(data.right);
+                const len = left.length;
+                // Allocate two buffers in WASM memory
+                const leftPtr = this.wasm.alloc_sample_buffer(len);
+                const rightPtr = this.wasm.alloc_sample_buffer(len);
+                // Refresh memory view (alloc may have grown memory)
+                if (this.memoryBuf !== this.wasm.memory.buffer) {
+                    this.memoryBuf = this.wasm.memory.buffer;
+                    this.memoryView = new Float32Array(this.memoryBuf);
+                }
+                // Copy PCM data into WASM memory
+                this.memoryView.set(left, leftPtr / 4);
+                this.memoryView.set(right, rightPtr / 4);
+                // Register with engine
+                this.wasm.load_sample(data.pad, leftPtr, rightPtr, len, data.sampleRate);
+                this.port.postMessage({ type: 'sample-loaded', pad: data.pad });
+                break;
+            }
+
+            // Trigger / release
+            case 'trigger': this.wasm.trigger(data.pad); break;
+            case 'release': this.wasm.release(data.pad); break;
+            case 'stop-pad': this.wasm.stop(data.pad); break;
+
+            // Per-pad params
+            case 'set-pad-param': this.wasm.set_pad_param(data.pad, data.param, data.value); break;
+
+            // Global params
+            case 'set-param':
+                if (data.voice !== undefined) {
+                    this.wasm.set_param(data.voice, data.param, data.value);
+                } else {
+                    this.wasm.set_param(data.id, data.value);
+                }
+                break;
+
+            // Note on/off (for sequencer / MIDI)
+            case 'note-on': this.wasm.note_on(data.note, data.velocity); break;
+            case 'note-off': this.wasm.note_off(data.note); break;
+
+            // Sequencer (reuse melodic handler cases)
+            case 'seq-play': this.wasm.seq_play(); break;
+            case 'seq-stop': this.wasm.seq_stop(); break;
+            case 'seq-bpm': this.wasm.seq_set_bpm(data.value); break;
+            case 'seq-clear': this.wasm.seq_clear(); break;
+            case 'seq-set-glitch': this.wasm.seq_set_glitch(data.value); break;
+
+            default:
+                // Melodic sequencer messages
+                melodicSeqHandler(this.wasm, data);
+                break;
+        }
+    }
+
+    process(inputs, outputs) {
+        if (!this.ready) return true;
+        const output = outputs[0];
+        const n = Math.min(output[0].length, 256);
+
+        this.wasm.process(n);
+        if (this.memoryBuf !== this.wasm.memory.buffer) {
+            this.memoryBuf = this.wasm.memory.buffer;
+            this.memoryView = new Float32Array(this.memoryBuf);
+        }
+        const lp = this.wasm.get_left_ptr() / 4;
+        const rp = this.wasm.get_right_ptr() / 4;
+        output[0].set(this.memoryView.subarray(lp, lp + n));
+        if (output[1]) output[1].set(this.memoryView.subarray(rp, rp + n));
+
+        const step = this.wasm.seq_get_current_step();
+        if (step !== this.lastStep) {
+            this.lastStep = step;
+            this.port.postMessage({ type: 'step', step });
+        }
+        return true;
+    }
+}
+
+registerProcessor('sampler-processor', SamplerProcessor);
+
 createSynthProcessor('tb303-processor', (wasm, data) => {
     switch (data.type) {
         case 'seq-set-step-note': wasm.seq_set_step_note(data.step, data.note); break;

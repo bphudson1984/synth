@@ -1,0 +1,11 @@
+[package]
+name = "sampler-wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+sampler-dsp = { path = "../sampler-dsp" }
+dsp-common = { path = "../dsp-common" }

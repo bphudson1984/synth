@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store';
 
-export type ChannelId = 'drum' | 'pad' | 'acid' | 'lead' | 'bass';
+export type ChannelId = 'drum' | 'pad' | 'acid' | 'lead' | 'bass' | 'sampler';
 
 interface ChannelState {
     volume: number;  // 0-100
@@ -15,6 +15,7 @@ export const channels = writable<Record<ChannelId, ChannelState>>({
     acid: { volume: 75, pan: 0, mute: false, solo: false },
     lead: { volume: 75, pan: 0, mute: false, solo: false },
     bass: { volume: 75, pan: 0, mute: false, solo: false },
+    sampler: { volume: 75, pan: 0, mute: false, solo: false },
 });
 
 const volumeCallbacks: Record<string, (gain: number) => void> = {};
@@ -30,7 +31,7 @@ function applyMix() {
     const state = get(channels);
     const anySolo = Object.values(state).some(c => c.solo);
 
-    for (const id of ['drum', 'pad', 'acid', 'lead', 'bass'] as ChannelId[]) {
+    for (const id of ['drum', 'bass', 'pad', 'acid', 'lead', 'sampler'] as ChannelId[]) {
         const ch = state[id];
         let gain: number;
         if (ch.mute) {

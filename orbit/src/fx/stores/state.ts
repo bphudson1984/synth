@@ -11,6 +11,7 @@ export const sendLevels = writable<SendLevels>({
     acid: [0, 0, 0, 0],
     lead: [0, 0, 0, 0],
     bass: [0, 0, 0, 0],
+    sampler: [0, 0, 0, 0],
 });
 
 // Effect parameters (raw values)

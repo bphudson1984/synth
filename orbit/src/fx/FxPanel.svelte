@@ -60,6 +60,7 @@
         { id: 'pad',  label: 'PD', colour: '#E8944A' },
         { id: 'acid', label: 'AC', colour: '#5DBE6E' },
         { id: 'lead', label: 'LD', colour: '#B56ECC' },
+        { id: 'sampler', label: 'SM', colour: '#E05555' },
     ];
 
     let activeTab = $state(0);
