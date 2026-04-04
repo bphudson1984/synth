@@ -41,7 +41,7 @@ export abstract class BaseEngine {
     }
 
     /** Set the mixer channel gain (0-1). Used by the mixer faders for pre-mix level control. */
-    setChannelGain(gain: number) { if (this.channelGain) this.channelGain.gain.value = gain; }
+    setChannelGain(gain: number) { if (this.channelGain) this.channelGain.gain.value = Math.max(0, Math.min(1, gain)); }
     setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
 
