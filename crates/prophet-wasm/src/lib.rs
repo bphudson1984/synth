@@ -171,12 +171,16 @@ pub extern "C" fn set_param(id: u32, value: f32) {
 /// Set the FX chain processing order.
 /// Each argument is an effect index: 0=chorus, 1=delay, 2=reverb.
 /// Effects are processed serially in the order (slot0 -> slot1 -> slot2).
+/// Arguments must be a permutation of [0, 1, 2]; invalid values are ignored.
 #[no_mangle]
 pub extern "C" fn set_fx_order(slot0: u8, slot1: u8, slot2: u8) {
+    // Validate: must be a permutation of [0, 1, 2]
+    if slot0 > 2 || slot1 > 2 || slot2 > 2 { return; }
+    if slot0 == slot1 || slot0 == slot2 || slot1 == slot2 { return; }
     unsafe {
-        FX_ORDER[0] = slot0.min(2);
-        FX_ORDER[1] = slot1.min(2);
-        FX_ORDER[2] = slot2.min(2);
+        FX_ORDER[0] = slot0;
+        FX_ORDER[1] = slot1;
+        FX_ORDER[2] = slot2;
     }
 }
 

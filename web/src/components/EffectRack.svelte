@@ -37,10 +37,7 @@
 
         fxOrder.update(order => {
             const newOrder = [...order];
-            // Swap the two positions
-            const temp = newOrder[dragIdx!];
-            newOrder[dragIdx!] = newOrder[targetIdx];
-            newOrder[targetIdx] = temp;
+            [newOrder[dragIdx!], newOrder[targetIdx]] = [newOrder[targetIdx], newOrder[dragIdx!]];
             return newOrder;
         });
         dragIdx = null;
