@@ -4,12 +4,27 @@
 use prophet_dsp::synth::ProphetSynth;
 use prophet_dsp::arpeggiator::{Arpeggiator, ArpMode, ArpDivision};
 use dsp_common::note_sequencer::MAX_STEPS;
+use fx_dsp::chorus::StereoChorus;
+use fx_dsp::delay::TapeDelay;
+use fx_dsp::reverb::PlateReverb;
+
+/// Number of effects in the serial FX chain.
+const NUM_FX: usize = 3;
 
 static mut SYNTH: Option<ProphetSynth> = None;
 static mut ARP: Option<Arpeggiator> = None;
 static mut ARP_LAST_NOTE: u8 = 0;
 static mut LEFT_BUF: [f32; 512] = [0.0; 512];
 static mut RIGHT_BUF: [f32; 512] = [0.0; 512];
+
+// Serial FX chain: chorus (0), delay (1), reverb (2)
+static mut CHORUS: Option<StereoChorus> = None;
+static mut DELAY: Option<TapeDelay> = None;
+static mut REVERB: Option<PlateReverb> = None;
+
+/// Effect processing order. Each element is an effect index (0=chorus, 1=delay, 2=reverb).
+/// Effects are processed serially: output of FX_ORDER[0] feeds into FX_ORDER[1], etc.
+static mut FX_ORDER: [u8; NUM_FX] = [0, 1, 2];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -33,6 +48,24 @@ pub extern "C" fn init(sample_rate: f32) {
         synth.master_volume = 0.5;
         SYNTH = Some(synth);
         ARP = Some(Arpeggiator::new(sample_rate));
+
+        // Initialize FX chain
+        CHORUS = Some(StereoChorus::new(sample_rate));
+        DELAY = Some(TapeDelay::new(sample_rate));
+        REVERB = Some(PlateReverb::new(sample_rate));
+        FX_ORDER = [0, 1, 2];
+    }
+}
+
+/// Process one stereo sample through the effect at the given index.
+/// Returns (left, right).
+#[inline(always)]
+unsafe fn process_effect(idx: u8, left: f32, right: f32) -> (f32, f32) {
+    match idx {
+        0 => CHORUS.as_mut().unwrap().process_stereo(left, right),
+        1 => DELAY.as_mut().unwrap().process(left, right),
+        2 => REVERB.as_mut().unwrap().process_stereo(left, right),
+        _ => (left, right),
     }
 }
 
@@ -55,11 +88,20 @@ pub extern "C" fn process(num_samples: u32) {
                 }
             }
 
-            // Synth process (includes embedded sequencer)
-            // Effects moved to shared FX rack — output dry mono
+            // Synth process (dry mono)
             let dry = synth.process();
-            LEFT_BUF[i] = dry;
-            RIGHT_BUF[i] = dry;
+            let mut l = dry;
+            let mut r = dry;
+
+            // Serial FX chain: each effect's output feeds the next
+            for slot in 0..NUM_FX {
+                let (out_l, out_r) = process_effect(FX_ORDER[slot], l, r);
+                l = out_l;
+                r = out_r;
+            }
+
+            LEFT_BUF[i] = l;
+            RIGHT_BUF[i] = r;
         }
     }
 }
@@ -92,7 +134,7 @@ pub extern "C" fn note_off(note: u8) {
 }
 
 /// Generic parameter setter. IDs 0-47 are synth params (delegated to DSP),
-/// 50-59 are effects, 60-67 are arpeggiator.
+/// 50-59 are effects (routed to FX chain), 60-67 are arpeggiator.
 #[no_mangle]
 pub extern "C" fn set_param(id: u32, value: f32) {
     unsafe {
@@ -101,8 +143,17 @@ pub extern "C" fn set_param(id: u32, value: f32) {
                 use dsp_common::engine::SynthEngine;
                 if let Some(synth) = SYNTH.as_mut() { synth.set_param(id, value); }
             }
-            // Effects moved to shared FX rack (IDs 50-59 are no-ops)
-            50..=59 => {}
+            // Effects: chorus (50-52), delay (53-56), reverb (57-59)
+            50 => { if let Some(c) = CHORUS.as_mut() { c.rate = value; } }
+            51 => { if let Some(c) = CHORUS.as_mut() { c.depth = value; } }
+            52 => { if let Some(c) = CHORUS.as_mut() { c.mix = value; } }
+            53 => { if let Some(d) = DELAY.as_mut() { d.time_ms = value; } }
+            54 => { if let Some(d) = DELAY.as_mut() { d.feedback = value.min(0.95); } }
+            55 => { if let Some(d) = DELAY.as_mut() { d.tone = value; } }
+            56 => { if let Some(d) = DELAY.as_mut() { d.mix = value; } }
+            57 => { if let Some(r) = REVERB.as_mut() { r.decay = value.min(0.99); } }
+            58 => { if let Some(r) = REVERB.as_mut() { r.damping = value; } }
+            59 => { if let Some(r) = REVERB.as_mut() { r.mix = value; } }
             // Arpeggiator (60-67)
             60 => { ARP.as_mut().unwrap().mode = ArpMode::from_u8(value as u8); }
             61 => { ARP.as_mut().unwrap().division = ArpDivision::from_u8(value as u8); }
@@ -114,6 +165,18 @@ pub extern "C" fn set_param(id: u32, value: f32) {
             67 => { ARP.as_mut().unwrap().all_notes_off(); }
             _ => {}
         }
+    }
+}
+
+/// Set the FX chain processing order.
+/// Each argument is an effect index: 0=chorus, 1=delay, 2=reverb.
+/// Effects are processed serially in the order (slot0 -> slot1 -> slot2).
+#[no_mangle]
+pub extern "C" fn set_fx_order(slot0: u8, slot1: u8, slot2: u8) {
+    unsafe {
+        FX_ORDER[0] = slot0.min(2);
+        FX_ORDER[1] = slot1.min(2);
+        FX_ORDER[2] = slot2.min(2);
     }
 }
 

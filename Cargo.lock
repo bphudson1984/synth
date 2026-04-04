@@ -1647,6 +1647,7 @@ name = "prophet-wasm"
 version = "0.1.0"
 dependencies = [
  "dsp-common",
+ "fx-dsp",
  "prophet-dsp",
 ]
 

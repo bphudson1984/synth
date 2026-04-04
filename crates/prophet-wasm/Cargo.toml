@@ -9,6 +9,7 @@ crate-type = ["cdylib"]
 [dependencies]
 prophet-dsp = { path = "../prophet-dsp" }
 dsp-common = { path = "../dsp-common" }
+fx-dsp = { path = "../fx-dsp" }
 
 [profile.release]
 opt-level = 3

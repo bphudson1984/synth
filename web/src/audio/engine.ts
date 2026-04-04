@@ -65,6 +65,10 @@ export class AudioEngine {
         this.node?.port.postMessage({ type: 'set-param', id, value });
     }
 
+    setFxOrder(order: number[]) {
+        this.node?.port.postMessage({ type: 'set-fx-order', order });
+    }
+
     async resume() {
         await this.ctx?.resume();
     }
