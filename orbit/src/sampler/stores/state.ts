@@ -87,7 +87,7 @@ export function setSamplerEngine(e: SamplerEngine) {
     samplerSeq.connectEngine(e);
     bpm.subscribe(() => {});
     registerMixerCallback('sampler',
-        (gain) => { engine?.setParam(200, gain); },
+        (gain) => { engine?.setChannelGain(gain); },
         (pan) => { engine?.setPan(pan); },
     );
 

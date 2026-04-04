@@ -42,7 +42,7 @@ export function setLeadEngine(e: BraidsEngine) {
         }
     };
     registerMixerCallback('lead',
-        (gain) => { engine?.setParam(PARAM.MASTER_VOL, gain); },
+        (gain) => { engine?.setChannelGain(gain); },
         (pan) => { engine?.setPan(pan); }
     );
     registerEngine({

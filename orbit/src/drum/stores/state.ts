@@ -31,7 +31,7 @@ export function setDrumEngine(e: OrbitEngine) {
         stop: () => { engine?.seqStop(); currentStep.set(0); lastDrumStep = -1; },
         setGlitch: (size: number) => { setDrumGlitch(size); },
     });
-    registerMixerCallback('drum', (gain) => { engine?.setMasterVolume(gain); }, (pan) => { engine?.setPan(pan); });
+    registerMixerCallback('drum', (gain) => { engine?.setChannelGain(gain); }, (pan) => { engine?.setPan(pan); });
 }
 
 // Selection
