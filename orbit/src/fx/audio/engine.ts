@@ -1,16 +1,17 @@
 import { getAudioContext } from '../../shared/audio/context';
 
-export type EffectId = 0 | 1 | 2 | 3; // chorus, delay, reverb, distortion
+export type EffectId = 0 | 1 | 2 | 3 | 4; // chorus, delay, reverb, distortion, octave
 
 export class FxEngine {
     private node: AudioWorkletNode | null = null;
     private _ready = false;
 
-    // 4 bus GainNodes — each sums all engine sends for that effect
+    // 5 bus GainNodes — each sums all engine sends for that effect
     chorusBus: GainNode | null = null;
     delayBus: GainNode | null = null;
     reverbBus: GainNode | null = null;
     distBus: GainNode | null = null;
+    octaveBus: GainNode | null = null;
 
     get ready() { return this._ready; }
 
@@ -21,7 +22,7 @@ export class FxEngine {
         const wasmBytes = await wasmResponse.arrayBuffer();
 
         this.node = new AudioWorkletNode(ctx, 'fx-processor', {
-            numberOfInputs: 4,
+            numberOfInputs: 5,
             numberOfOutputs: 1,
             outputChannelCount: [2],
             channelCount: 2,
@@ -37,17 +38,19 @@ export class FxEngine {
             this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes }, [wasmBytes]);
         });
 
-        // Create the 4 bus GainNodes
+        // Create the 5 bus GainNodes
         this.chorusBus = ctx.createGain();
         this.delayBus = ctx.createGain();
         this.reverbBus = ctx.createGain();
         this.distBus = ctx.createGain();
+        this.octaveBus = ctx.createGain();
 
         // Connect buses to FX worklet inputs
         this.chorusBus.connect(this.node, 0, 0);
         this.delayBus.connect(this.node, 0, 1);
         this.reverbBus.connect(this.node, 0, 2);
         this.distBus.connect(this.node, 0, 3);
+        this.octaveBus.connect(this.node, 0, 4);
 
         // Connect FX output to destination
         this.node.connect(ctx.destination);

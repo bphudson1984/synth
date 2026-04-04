@@ -3,15 +3,15 @@ import type { FxEngine, EffectId } from '../audio/engine';
 import type { ChannelId } from '../../shared/stores/mixer';
 
 // Per-engine send levels for each effect: sendLevels[channelId][effectIndex] = 0..100
-type SendLevels = Record<ChannelId, [number, number, number, number]>;
+type SendLevels = Record<ChannelId, [number, number, number, number, number]>;
 
 export const sendLevels = writable<SendLevels>({
-    drum: [0, 0, 0, 0],
-    pad:  [0, 0, 0, 0],
-    acid: [0, 0, 0, 0],
-    lead: [0, 0, 0, 0],
-    bass: [0, 0, 0, 0],
-    sampler: [0, 0, 0, 0],
+    drum: [0, 0, 0, 0, 0],
+    pad:  [0, 0, 0, 0, 0],
+    acid: [0, 0, 0, 0, 0],
+    lead: [0, 0, 0, 0, 0],
+    bass: [0, 0, 0, 0, 0],
+    sampler: [0, 0, 0, 0, 0],
 });
 
 // Effect parameters (raw values)
@@ -19,11 +19,13 @@ export const sendLevels = writable<SendLevels>({
 // Delay: 0=time_ms, 1=feedback, 2=tone
 // Reverb: 0=decay, 1=damping
 // Distortion: 0=drive, 1=tone, 2=level
+// Octave: 0=dry, 1=sub, 2=up
 export const fxParams = writable<Record<number, Record<number, number>>>({
     0: { 0: 0.8, 1: 0.5 },
     1: { 0: 375, 1: 0.4, 2: 0.6 },
     2: { 0: 0.7, 1: 0.7 },
     3: { 0: 0.3, 1: 0.5, 2: 0.7 },
+    4: { 0: 1.0, 1: 0.5, 2: 0.0 },
 });
 
 let fxEngine: FxEngine | null = null;
@@ -54,7 +56,7 @@ export function setFxParam(effectId: EffectId, paramId: number, value: number) {
 
 export function setSendLevel(channelId: ChannelId, effectIndex: number, level: number) {
     sendLevels.update(s => {
-        const arr = [...s[channelId]] as [number, number, number, number];
+        const arr = [...s[channelId]] as [number, number, number, number, number];
         arr[effectIndex] = level;
         return { ...s, [channelId]: arr };
     });
