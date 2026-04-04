@@ -36,7 +36,10 @@
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('pad'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('pad')) toggleSection('pad'); }}>Pad Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('acid'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('acid')) toggleSection('acid'); }}>Acid Synth</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('lead'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('lead')) toggleSection('lead'); }}>Lead Synth</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('bass'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('bass')) toggleSection('bass'); }}>Bass Synth</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('sampler'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('sampler')) toggleSection('sampler'); }}>Sampler</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('mix'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('mix')) toggleSection('mix'); }}>Mixer</button></li>
+            <li><button class="toc-link" onclick={() => { const el = document.getElementById('fx'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('fx')) toggleSection('fx'); }}>FX Rack</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('sequencer'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('sequencer')) toggleSection('sequencer'); }}>Sequencer &amp; Recording</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('tips'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('tips')) toggleSection('tips'); }}>Tips &amp; Tricks</button></li>
             <li><button class="toc-link" onclick={() => { const el = document.getElementById('specs'); if (el) el.scrollIntoView({ behavior: 'smooth' }); if (!isOpen('specs')) toggleSection('specs'); }}>Technical Specs</button></li>
@@ -53,13 +56,13 @@
             <div class="section-body">
                 <h3>What is ORBIT?</h3>
                 <p>
-                    ORBIT is a browser-based music production workstation that combines four
-                    classic synthesiser and drum machine emulations into a single app. Everything
-                    runs locally in your browser using WebAssembly — no server, no account, no
-                    internet required after the initial load.
+                    ORBIT is a browser-based music production workstation that combines six
+                    classic synthesiser, drum machine, and sampler emulations into a single app
+                    with a shared FX rack. Everything runs locally in your browser using
+                    WebAssembly — no server, no account, no internet required after the initial load.
                 </p>
 
-                <h3>The Four Engines</h3>
+                <h3>The Six Engines</h3>
                 <div class="card-grid">
                     <div class="card" style="--card-accent: #378ADD">
                         <div class="card-label">DRUM</div>
@@ -77,20 +80,29 @@
                         <div class="card-label">LEAD</div>
                         <div class="card-desc">Braids modal synth with 13 models — from saw to cloud granular</div>
                     </div>
+                    <div class="card" style="--card-accent: #D4A843">
+                        <div class="card-label">BASS</div>
+                        <div class="card-desc">Korg Volca Bass with 3 VCOs, diode bridge filter, and LFO</div>
+                    </div>
+                    <div class="card" style="--card-accent: #E05555">
+                        <div class="card-label">SAMPLE</div>
+                        <div class="card-desc">SP-404MK2 inspired sampler with 16 pads, vocoder, and bit crush</div>
+                    </div>
                 </div>
 
                 <h3>First Launch</h3>
                 <ol>
                     <li>Open ORBIT in a modern browser (Chrome, Firefox, or Safari).</li>
-                    <li>Tap <strong>TAP TO START</strong> on the splash screen. This initialises all four audio engines — it may take a moment.</li>
-                    <li>You arrive on the <strong>DRUM</strong> tab. Use the top navigation to switch between DRUM, PAD, ACID, LEAD, and MIX.</li>
+                    <li>Tap <strong>TAP TO START</strong> on the splash screen. This initialises all six audio engines — it may take a moment.</li>
+                    <li>You arrive on the <strong>DRUM</strong> tab. Use the top navigation to switch between DRUM, PAD, ACID, LEAD, BASS, SAMPLE, MIX, and FX.</li>
                     <li>Hit <strong>Play ▶</strong> in any panel to start the transport. All engines share a single global clock.</li>
                 </ol>
 
                 <h3>Navigation</h3>
                 <p>
-                    The tab bar at the top of the screen lets you switch panels instantly. The five tabs are
-                    <strong>DRUM</strong>, <strong>PAD</strong>, <strong>ACID</strong>, <strong>LEAD</strong>, and <strong>MIX</strong>.
+                    The tab bar at the top of the screen lets you switch panels instantly. The tabs are
+                    <strong>DRUM</strong>, <strong>PAD</strong>, <strong>ACID</strong>, <strong>LEAD</strong>,
+                    <strong>BASS</strong>, <strong>SAMPLE</strong>, <strong>MIX</strong>, and <strong>FX</strong>.
                     A <strong>?</strong> button in the top-right opens this help page.
                 </p>
                 <p>
@@ -205,7 +217,7 @@
                     The play controls at the bottom include <strong>BPM −/+</strong> buttons
                     (range 60–200), a BPM display, and <strong>Stop / Play</strong> buttons.
                     The transport is shared across all panels — pressing play here also starts
-                    the Pad, Acid, and Lead sequencers.
+                    the Pad, Acid, Lead, Bass, and Sampler sequencers.
                 </p>
             </div>
         {/if}
@@ -460,17 +472,273 @@
             </div>
         {/if}
     </section>
+    <!-- BASS SYNTH -->
+    <section id="bass" class="section">
+        <button class="section-header" onclick={() => toggleSection('bass')}>
+            <span class="section-number">06</span>
+            <span class="section-title">Bass Synth</span>
+            <span class="chevron" class:open={isOpen('bass')}>▸</span>
+        </button>
+        {#if isOpen('bass')}
+            <div class="section-body">
+                <p>
+                    The Bass panel is a <strong>Korg Volca Bass</strong> inspired analogue-modelling
+                    synthesiser with three independent VCOs, a diode bridge lowpass filter, and
+                    a free-running LFO. It excels at deep subs, acid lines, and evolving bass textures.
+                </p>
+
+                <h3>3-VCO Architecture</h3>
+                <p>
+                    Each of the three voltage-controlled oscillators can be set independently:
+                </p>
+                <table>
+                    <thead><tr><th>Control</th><th>Per VCO</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>WAVE</td><td>✓</td><td>SAW (sawtooth) or SQR (square 50% duty) — both PolyBLEP antialiased</td></tr>
+                        <tr><td>PITCH</td><td>✓</td><td>Semitone offset from base note (−12 to +12)</td></tr>
+                        <tr><td>ACTIVE</td><td>✓</td><td>Enable or disable the oscillator in the mix</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    VCO 2 and VCO 3 default to slight detune (±0.1 semitones) for a warm unison
+                    effect. Disable individual oscillators to thin the sound, or stack all three
+                    with pitch offsets for power chords and octave layers.
+                </p>
+
+                <h3>Group Mode</h3>
+                <ul>
+                    <li><strong>ALL (Unison)</strong>: All three VCOs play the same note — thick, monophonic bass.</li>
+                    <li><strong>POLY (Paraphonic)</strong>: Each VCO plays a different note via round-robin — up to 3 simultaneous pitches sharing one filter.</li>
+                </ul>
+
+                <h3>Filter</h3>
+                <p>
+                    A <strong>diode bridge lowpass filter</strong> inspired by the Korg MiniKorg 700S.
+                    It is a 2-pole (12 dB/oct) design with nonlinear saturation — louder signals
+                    naturally push the cutoff lower, creating a breathing, organic quality.
+                </p>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>CUTOFF</td><td>20–12,000 Hz</td><td>Filter frequency</td></tr>
+                        <tr><td>PEAK</td><td>0–1.0</td><td>Resonance — above 0.95 the filter self-oscillates</td></tr>
+                        <tr><td>EG INT</td><td>0–1.0</td><td>How much the envelope sweeps the cutoff</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Envelope</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>ATTACK</td><td>0.5 ms – 10 s</td><td>Time from gate-on to peak</td></tr>
+                        <tr><td>DEC/REL</td><td>10 ms – 10 s</td><td>Shared decay and release time</td></tr>
+                        <tr><td>SUSTAIN</td><td>ON / OFF</td><td>ON = hold at peak (ASR), OFF = decay to zero (AD)</td></tr>
+                        <tr><td>EG→VCA</td><td>ON / OFF</td><td>Route envelope to amplitude — disable for drone-like sustain</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>LFO</h3>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>RATE</td><td>0.1–30 Hz</td><td>Oscillation speed</td></tr>
+                        <tr><td>INT</td><td>0–1.0</td><td>Modulation depth</td></tr>
+                        <tr><td>WAVE</td><td>TRI / SQR</td><td>Triangle or square LFO shape</td></tr>
+                        <tr><td>→PITCH</td><td>ON / OFF</td><td>Modulate VCO pitch (vibrato)</td></tr>
+                        <tr><td>→CUTOFF</td><td>ON / OFF</td><td>Modulate filter cutoff (wah)</td></tr>
+                        <tr><td>→AMP</td><td>ON / OFF</td><td>Modulate volume (tremolo)</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Legato &amp; Glide</h3>
+                <p>
+                    When a new note starts while the previous gate is still open, the VCOs
+                    <strong>glide smoothly</strong> to the new pitch instead of retriggering the
+                    envelope. This is perfect for expressive acid slides and smooth bass runs.
+                </p>
+
+                <h3>Note Pads</h3>
+                <p>
+                    Eight pads in the <strong>C natural minor scale</strong> (C, D, Eb, F, G, Ab, Bb, C')
+                    starting at MIDI note 36 (C2). Tap to trigger notes live or record into the sequencer.
+                </p>
+
+                <h3>Presets</h3>
+                <p>
+                    <strong>10 sound presets</strong> set all synth parameters, and <strong>16 pattern
+                    presets</strong> load ready-made bass sequences:
+                </p>
+                <h4>Sound Presets</h4>
+                <div class="preset-grid">
+                    <span class="preset-tag">Warm Unison</span>
+                    <span class="preset-tag">Sub Weight</span>
+                    <span class="preset-tag">Acid Bass</span>
+                    <span class="preset-tag">Deep Throb</span>
+                    <span class="preset-tag">Growl</span>
+                    <span class="preset-tag">Pulse Pad</span>
+                    <span class="preset-tag">Squelch Box</span>
+                    <span class="preset-tag">Fifth Stack</span>
+                    <span class="preset-tag">Haunted</span>
+                    <span class="preset-tag">Motorik</span>
+                </div>
+                <h4>Pattern Presets</h4>
+                <div class="preset-grid">
+                    <span class="preset-tag">House Foundation</span>
+                    <span class="preset-tag">Sub Weight</span>
+                    <span class="preset-tag">Dub Pressure</span>
+                    <span class="preset-tag">Techno Pulse</span>
+                    <span class="preset-tag">Motorik</span>
+                    <span class="preset-tag">Syncopated Funk</span>
+                    <span class="preset-tag">Acid Line</span>
+                    <span class="preset-tag">Squelch</span>
+                    <span class="preset-tag">Minor Walk</span>
+                    <span class="preset-tag">Octave Jump</span>
+                    <span class="preset-tag">Chromatic Descent</span>
+                    <span class="preset-tag">Unison Throb</span>
+                    <span class="preset-tag">Fifth Groove</span>
+                    <span class="preset-tag">Haunted</span>
+                    <span class="preset-tag">Growl Machine</span>
+                    <span class="preset-tag">Off Beat</span>
+                </div>
+            </div>
+        {/if}
+    </section>
+    <!-- SAMPLER -->
+    <section id="sampler" class="section">
+        <button class="section-header" onclick={() => toggleSection('sampler')}>
+            <span class="section-number">07</span>
+            <span class="section-title">Sampler</span>
+            <span class="chevron" class:open={isOpen('sampler')}>▸</span>
+        </button>
+        {#if isOpen('sampler')}
+            <div class="section-body">
+                <p>
+                    The Sample panel is an <strong>SP-404MK2 inspired sampler</strong> with 16 trigger
+                    pads, 32-voice polyphony, per-pad DSP effects (vocoder, bit crush), interactive
+                    waveform slicing, and full sequencer integration.
+                </p>
+
+                <h3>Loading Samples</h3>
+                <ul>
+                    <li><strong>LOAD button</strong>: Opens a file picker — select any audio file (MP3, WAV, etc.) to load onto the selected pad.</li>
+                    <li><strong>Drag &amp; drop</strong>: Drop an audio file directly onto a pad to load it.</li>
+                    <li><strong>STOCK KIT</strong>: Loads a built-in kit of 12 drum and melodic samples (kicks, snares, hi-hats, claps, toms, and Casio keys) onto pads 1–12.</li>
+                    <li><strong>REC button</strong>: Record from your microphone directly to the selected pad.</li>
+                </ul>
+                <p>
+                    Samples are automatically saved to your browser's local storage and restored
+                    when you reopen ORBIT.
+                </p>
+
+                <h3>The 16 Pads</h3>
+                <p>
+                    Sixteen pads are arranged in a circle, mapped to MIDI notes 36–51. Tap a pad
+                    to select it and trigger playback. Loaded pads glow red; empty pads appear grey.
+                    The pad label and sample name are shown above the waveform display.
+                </p>
+
+                <h3>Play Modes</h3>
+                <table>
+                    <thead><tr><th>Mode</th><th>Behaviour</th></tr></thead>
+                    <tbody>
+                        <tr><td>ONE-SHOT</td><td>Plays sample to the end regardless of gate length (default)</td></tr>
+                        <tr><td>GATE</td><td>Plays while held — releases on note-off with configurable release fade</td></tr>
+                        <tr><td>LOOP</td><td>Loops continuously between the start and end points until stopped</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Choke Groups</h3>
+                <p>
+                    Assign pads to one of <strong>4 choke groups</strong> (or OFF). When a pad in a
+                    choke group triggers, all other voices in the same group are released — perfect
+                    for open/closed hi-hat pairs or one-at-a-time kicks.
+                </p>
+
+                <h3>Per-Pad Parameters</h3>
+                <p>Tap <strong>SETTINGS</strong> to reveal parameter controls for the selected pad:</p>
+
+                <h4>Level</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>VOLUME</td><td>0–1.0</td><td>Output level</td></tr>
+                        <tr><td>PAN</td><td>L100 – R100</td><td>Stereo position</td></tr>
+                        <tr><td>BIT CRUSH</td><td>1–16 bits</td><td>Reduces audio fidelity — 16 = clean, lower values add lo-fi crunch</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Pitch</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>PITCH</td><td>−24 to +24 semitones</td><td>Transpose the sample up or down</td></tr>
+                    </tbody>
+                </table>
+
+                <h4>Envelope</h4>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>ATTACK</td><td>0–2 s</td><td>Fade-in time</td></tr>
+                        <tr><td>RELEASE</td><td>0–2 s</td><td>Fade-out time (GATE and LOOP modes)</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Waveform Slicing</h3>
+                <p>
+                    The waveform display shows the loaded sample with draggable
+                    <strong style="color:#4CAF50">green (START)</strong> and
+                    <strong style="color:#F44336">red (END)</strong> handles. Drag to select which
+                    portion of the sample plays. Regions outside the slice are dimmed. Looping,
+                    reverse, and pitch shifting all respect the slice boundaries.
+                </p>
+
+                <h3>Vocoder</h3>
+                <p>
+                    Each pad has a built-in <strong>channel vocoder</strong> that analyses the spectral
+                    envelope of the sample and applies it to an internal carrier oscillator — making
+                    the synth "speak" with the sample's character.
+                </p>
+                <table>
+                    <thead><tr><th>Parameter</th><th>Range</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>ENABLE</td><td>ON / OFF</td><td>Activate vocoder processing</td></tr>
+                        <tr><td>ROOT</td><td>MIDI 24–84</td><td>Reference pitch the sample was recorded at</td></tr>
+                        <tr><td>CARRIER</td><td>SAW / SQR / NOISE</td><td>Carrier oscillator waveform</td></tr>
+                        <tr><td>BANDS</td><td>4–16</td><td>Number of analysis bands (more = higher fidelity)</td></tr>
+                        <tr><td>FORMANT</td><td>−12 to +12</td><td>Shift spectral envelope up or down (semitones)</td></tr>
+                        <tr><td>MIX</td><td>0–1.0</td><td>Dry/wet blend — 0 = original sample, 1 = full vocoder</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Reverse &amp; Other Controls</h3>
+                <ul>
+                    <li><strong>REVERSE</strong>: Toggle to play the sample backwards.</li>
+                    <li><strong>CHOKE</strong>: Select choke group (OFF, 1, 2, 3, or 4).</li>
+                    <li><strong>MODE</strong>: Choose ONE-SHOT, GATE, or LOOP playback.</li>
+                </ul>
+
+                <h3>32-Voice Polyphony</h3>
+                <p>
+                    Up to 32 simultaneous voices can play at once across all 16 pads. When the
+                    voice pool is full, the oldest voice is stolen. Each voice has independent
+                    pitch, envelope, vocoder, and panning — so layering multiple pads produces
+                    rich, full arrangements.
+                </p>
+            </div>
+        {/if}
+    </section>
     <!-- MIXER -->
     <section id="mix" class="section">
         <button class="section-header" onclick={() => toggleSection('mix')}>
-            <span class="section-number">06</span>
+            <span class="section-number">08</span>
             <span class="section-title">Mixer</span>
             <span class="chevron" class:open={isOpen('mix')}>▸</span>
         </button>
         {#if isOpen('mix')}
             <div class="section-body">
                 <p>
-                    The Mix panel gives you master control over all four engines with per-channel
+                    The Mix panel gives you master control over all six engines with per-channel
                     volume, panning, mute, and solo.
                 </p>
 
@@ -482,6 +750,8 @@
                         <tr><td>PAD</td><td><span class="colour-swatch" style="background:#E8944A"></span> Orange</td><td>75</td></tr>
                         <tr><td>ACID</td><td><span class="colour-swatch" style="background:#5DBE6E"></span> Green</td><td>75</td></tr>
                         <tr><td>LEAD</td><td><span class="colour-swatch" style="background:#B56ECC"></span> Purple</td><td>75</td></tr>
+                        <tr><td>BASS</td><td><span class="colour-swatch" style="background:#D4A843"></span> Gold</td><td>75</td></tr>
+                        <tr><td>SAMPLE</td><td><span class="colour-swatch" style="background:#E05555"></span> Red</td><td>75</td></tr>
                     </tbody>
                 </table>
 
@@ -503,18 +773,72 @@
         {/if}
     </section>
 
+    <!-- FX RACK -->
+    <section id="fx" class="section">
+        <button class="section-header" onclick={() => toggleSection('fx')}>
+            <span class="section-number">09</span>
+            <span class="section-title">FX Rack</span>
+            <span class="chevron" class:open={isOpen('fx')}>▸</span>
+        </button>
+        {#if isOpen('fx')}
+            <div class="section-body">
+                <p>
+                    The FX panel is a <strong>shared effects rack</strong> with four independent effect
+                    processors. Every engine can send audio to each effect at an independent level,
+                    so you can apply different amounts of reverb, delay, chorus, and distortion to
+                    each instrument.
+                </p>
+
+                <h3>Effects</h3>
+                <table>
+                    <thead><tr><th>Effect</th><th>Parameters</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>CHORUS</td><td>RATE (0.1–5 Hz), DEPTH (0–1)</td><td>Stereo chorus for width and movement</td></tr>
+                        <tr><td>DELAY</td><td>TIME (1–1000 ms), FEEDBACK (0–0.95), TONE (0–1)</td><td>Tempo-synced echo with tone-filtered repeats</td></tr>
+                        <tr><td>REVERB</td><td>DECAY (0–0.99), DAMPING (0–1)</td><td>Algorithmic reverb for room and space</td></tr>
+                        <tr><td>DISTORTION</td><td>DRIVE (0–1), TONE (0–1), LEVEL (0–1)</td><td>Waveshaping overdrive with tone control</td></tr>
+                    </tbody>
+                </table>
+
+                <h3>Send Levels</h3>
+                <p>
+                    Each effect tab shows six send faders — one per engine. Raise a fader to send
+                    more of that engine's audio into the effect:
+                </p>
+                <table>
+                    <thead><tr><th>Send</th><th>Colour</th><th>Engine</th></tr></thead>
+                    <tbody>
+                        <tr><td>DR</td><td><span class="colour-swatch" style="background:#378ADD"></span> Blue</td><td>Drum</td></tr>
+                        <tr><td>BS</td><td><span class="colour-swatch" style="background:#D4A843"></span> Gold</td><td>Bass</td></tr>
+                        <tr><td>PD</td><td><span class="colour-swatch" style="background:#E8944A"></span> Orange</td><td>Pad</td></tr>
+                        <tr><td>AC</td><td><span class="colour-swatch" style="background:#5DBE6E"></span> Green</td><td>Acid</td></tr>
+                        <tr><td>LD</td><td><span class="colour-swatch" style="background:#B56ECC"></span> Purple</td><td>Lead</td></tr>
+                        <tr><td>SM</td><td><span class="colour-swatch" style="background:#E05555"></span> Red</td><td>Sampler</td></tr>
+                    </tbody>
+                </table>
+                <p>
+                    All send levels default to 0 (dry). Raise the faders to taste — a little reverb
+                    on the pad synth and some delay on the lead is a great starting point.
+                </p>
+            </div>
+        {/if}
+    </section>
+
     <!-- SEQUENCER & RECORDING -->
     <section id="sequencer" class="section">
         <button class="section-header" onclick={() => toggleSection('sequencer')}>
-            <span class="section-number">07</span>
+            <span class="section-number">10</span>
             <span class="section-title">Sequencer &amp; Recording</span>
             <span class="chevron" class:open={isOpen('sequencer')}>▸</span>
         </button>
         {#if isOpen('sequencer')}
             <div class="section-body">
                 <p>
-                    The PAD and LEAD panels share a powerful multi-page note sequencer. Up to
+                    The <strong>PAD</strong>, <strong>LEAD</strong>, <strong>BASS</strong>, and
+                    <strong>SAMPLE</strong> panels share a powerful multi-page note sequencer. Up to
                     <strong>8 pages × 16 steps = 128 steps</strong> can be programmed per instrument.
+                    Each engine also supports <strong>sequence banks</strong> with up to 8 variations
+                    that can be chained or randomised.
                 </p>
 
                 <h3>Basic Operation</h3>
@@ -579,13 +903,65 @@
                     sequence. The dragged step becomes faded and a ghost label shows where
                     it will land.
                 </p>
+
+                <h3>Sequence Banks &amp; Chaining</h3>
+                <p>
+                    Each engine can store up to <strong>8 sequence variations</strong> in a bank.
+                    The bank selector appears below the sequencer grid with numbered buttons
+                    for each slot. Controls include:
+                </p>
+                <ul>
+                    <li><strong>+</strong>: Create a new empty sequence (up to 8 max).</li>
+                    <li><strong>DUP</strong>: Duplicate the current sequence into a new slot — useful for creating variations.</li>
+                    <li><strong>DEL</strong>: Delete the current sequence (at least 1 must remain).</li>
+                    <li><strong>CHAIN</strong>: When active, the sequencer automatically advances to the next sequence when the current one ends (1→2→3→…→1). Mutually exclusive with RND.</li>
+                    <li><strong>RND</strong>: When active, a random sequence is selected at the end of each loop (never the same one twice in a row). Mutually exclusive with CHAIN.</li>
+                </ul>
+                <p>
+                    Combine chaining with multi-page sequences to build long, evolving song structures
+                    — or use random mode for generative, never-repeating performances.
+                </p>
+
+                <h3>Glitch Mode</h3>
+                <p>
+                    Every panel includes a <strong>spring-loaded glitch slider</strong> in the play
+                    controls area. Press and hold one of the four buttons to stutter-repeat the
+                    last few steps in real time:
+                </p>
+                <ul>
+                    <li><strong>8</strong>: Repeats the last 1/8 of a step — fastest stutter</li>
+                    <li><strong>4</strong>: Repeats the last 1/4 of a step</li>
+                    <li><strong>2</strong>: Repeats the last 1/2 of a step</li>
+                    <li><strong>1</strong>: Repeats the last full step — slowest stutter</li>
+                </ul>
+                <p>
+                    The glitch is <strong>spring-loaded</strong> — release your finger and it snaps
+                    back to normal playback instantly. Drag between buttons while holding to change
+                    the repeat size on the fly. The MIX panel also has a global glitch that affects
+                    all engines at once.
+                </p>
+
+                <h3>Synth Settings &amp; Quick Slots</h3>
+                <p>
+                    The <strong>PAD</strong>, <strong>LEAD</strong>, <strong>ACID</strong>, and
+                    <strong>BASS</strong> panels each have a <strong>SETTINGS</strong> button that
+                    opens a deep-edit panel with full access to every synth parameter — oscillators,
+                    filters, envelopes, LFOs, modulation routing, and more.
+                </p>
+                <p>
+                    Each settings panel also offers <strong>8 assignable quick slots</strong>. Tap a
+                    numbered button (1–8) next to any slider parameter to assign it to that slot.
+                    Once assigned, select the slot and use the quick-access slider at the bottom of
+                    the panel to adjust the parameter in real time during playback — perfect for
+                    live performance tweaking without opening the full settings panel.
+                </p>
             </div>
         {/if}
     </section>
     <!-- TIPS & TRICKS -->
     <section id="tips" class="section">
         <button class="section-header" onclick={() => toggleSection('tips')}>
-            <span class="section-number">08</span>
+            <span class="section-number">11</span>
             <span class="section-title">Tips &amp; Tricks</span>
             <span class="chevron" class:open={isOpen('tips')}>▸</span>
         </button>
@@ -598,7 +974,10 @@
                     <li>Switch to the <strong>PAD</strong> tab and record a chord progression using the sequencer.</li>
                     <li>Add an <strong>acid bassline</strong> on the ACID tab — tweak cutoff and resonance for that classic squelch.</li>
                     <li>Layer a <strong>lead melody</strong> on the LEAD tab — try different synthesis models for variety.</li>
+                    <li>Add a <strong>bass foundation</strong> on the BASS tab — use all 3 VCOs detuned for thickness.</li>
+                    <li>Drop in <strong>samples</strong> on the SAMPLE tab — load a stock kit or your own sounds.</li>
                     <li>Open the <strong>MIX</strong> tab to balance volumes, pan channels, and use mute/solo to focus.</li>
+                    <li>Add <strong>FX</strong> — send some reverb to the pad, delay to the lead, and distortion to the bass.</li>
                     <li>Press play and everything runs in sync!</li>
                 </ol>
 
@@ -609,6 +988,10 @@
                     <li><strong>Plucked leads</strong>: Set the LEAD model to PLUK with short release for staccato plucked-string sounds.</li>
                     <li><strong>Thick swarms</strong>: Use the SWARM model on the LEAD panel and adjust Timbre to control the number of detuned voices.</li>
                     <li><strong>808 vs 909</strong>: Double-tap individual drum pads to mix engines — try a 909 kick with 808 hi-hats.</li>
+                    <li><strong>Deep sub bass</strong>: On the BASS panel, try the "Sub Weight" preset — one square-wave VCO with low cutoff for pure sub.</li>
+                    <li><strong>Paraphonic bass chords</strong>: Switch BASS group mode to POLY and detune VCOs to different semitones for bass chords through one filter.</li>
+                    <li><strong>Lo-fi samples</strong>: On the SAMPLE panel, reduce BIT CRUSH to 4–8 bits for vintage digital crunch. Combine with pitch shifting for lo-fi textures.</li>
+                    <li><strong>Vocal samples</strong>: Enable the vocoder on a pad, load a vocal sample, and play pitched notes through it for robotic vocal effects.</li>
                 </ul>
 
                 <h3>Sequencer Techniques</h3>
@@ -619,6 +1002,17 @@
                     <li><strong>Ping-pong direction</strong>: Set direction to PING for melodies that bounce back and forth.</li>
                     <li><strong>Random direction</strong>: Set direction to RND for generative, ever-evolving sequences.</li>
                     <li><strong>Step entry</strong>: Stop playback and use the pads to record one step at a time for precise programming.</li>
+                    <li><strong>Sequence chaining</strong>: Create 2–4 variations of a pattern in the bank, then enable CHAIN for an evolving song structure.</li>
+                    <li><strong>Random sequences</strong>: Enable RND on the sequence bank for generative, non-repeating arrangements.</li>
+                    <li><strong>Glitch fills</strong>: Hold the glitch button (8 or 4) right before a drop for instant build-up tension, then release for the payoff.</li>
+                </ul>
+
+                <h3>FX Tips</h3>
+                <ul>
+                    <li><strong>Reverb on pads</strong>: A medium reverb send on the PAD channel adds depth and space to chord stabs.</li>
+                    <li><strong>Delay on lead</strong>: Synced delay on the LEAD channel creates rhythmic echoes that fill out the mix.</li>
+                    <li><strong>Distortion on bass</strong>: A touch of distortion on the BASS or ACID channel adds presence and grit.</li>
+                    <li><strong>Chorus on everything</strong>: Subtle chorus sends across multiple channels widen the stereo image.</li>
                 </ul>
 
                 <h3>Performance</h3>
@@ -627,6 +1021,8 @@
                     <li><strong>Latch + Arp</strong>: Enable both latch and arpeggiator on the LEAD panel for hands-free evolving arpeggios.</li>
                     <li><strong>Mute/Solo</strong>: Use the MIX panel's mute and solo buttons to create breakdowns and build-ups.</li>
                     <li><strong>Transpose</strong>: On the ACID panel, tap different note pads to transpose the bassline to match your chord progression in real time.</li>
+                    <li><strong>Quick slots</strong>: Assign your most-used parameters to quick slots for one-slider live control without opening settings.</li>
+                    <li><strong>Global glitch</strong>: Use the MIX panel's glitch slider to stutter all engines at once for dramatic performance effects.</li>
                 </ul>
             </div>
         {/if}
@@ -635,7 +1031,7 @@
     <!-- TECHNICAL SPECS -->
     <section id="specs" class="section">
         <button class="section-header" onclick={() => toggleSection('specs')}>
-            <span class="section-number">09</span>
+            <span class="section-number">12</span>
             <span class="section-title">Technical Specs</span>
             <span class="chevron" class:open={isOpen('specs')}>▸</span>
         </button>
@@ -656,6 +1052,9 @@
                         <tr><td>PAD</td><td>Sequential Prophet-5</td><td>Rust → WASM (prophet-dsp.wasm)</td></tr>
                         <tr><td>ACID</td><td>Roland TB-303</td><td>Rust → WASM (tb303.wasm)</td></tr>
                         <tr><td>LEAD</td><td>Mutable Instruments Braids</td><td>Rust → WASM (braids-dsp.wasm)</td></tr>
+                        <tr><td>BASS</td><td>Korg Volca Bass</td><td>Rust → WASM (volca-bass.wasm)</td></tr>
+                        <tr><td>SAMPLE</td><td>Roland SP-404MK2 style</td><td>Rust → WASM (sampler.wasm)</td></tr>
+                        <tr><td>FX</td><td>Shared effects rack</td><td>Rust → WASM (fx-rack.wasm)</td></tr>
                     </tbody>
                 </table>
 
@@ -670,6 +1069,9 @@
                         <tr><td>Pad Preset</td><td>Warm Pad</td><td>14 presets</td></tr>
                         <tr><td>Acid Waveform</td><td>Sawtooth</td><td>SAW / SQR</td></tr>
                         <tr><td>Lead Model</td><td>SAW</td><td>13 models</td></tr>
+                        <tr><td>Bass Preset</td><td>Warm Unison</td><td>10 sound + 16 pattern presets</td></tr>
+                        <tr><td>Sampler</td><td>Empty (load via STOCK KIT)</td><td>16 pads</td></tr>
+                        <tr><td>FX Sends</td><td>All at 0 (dry)</td><td>0–100 per engine per effect</td></tr>
                     </tbody>
                 </table>
 
@@ -678,9 +1080,10 @@
                     ORBIT's audio engines are written in <strong>Rust</strong> and compiled to
                     <strong>WebAssembly</strong> for near-native performance in the browser. Each
                     engine runs inside an <strong>AudioWorklet</strong> on a dedicated real-time
-                    audio thread, ensuring low-latency, glitch-free playback. The user interface
-                    is built with <strong>Svelte 5</strong> and communicates with the WASM engines
-                    via message ports.
+                    audio thread, ensuring low-latency, glitch-free playback. A shared FX rack
+                    processes all engine outputs through four independent effect buses. The user
+                    interface is built with <strong>Svelte 5</strong> and communicates with the
+                    WASM engines via message ports.
                 </p>
                 <p>
                     No audio data is sent to a server — everything is synthesised locally on your
