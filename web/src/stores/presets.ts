@@ -32,6 +32,9 @@ function p(overrides: [number, number][]): [number, number][] {
         [PARAM.DELAY_TIME, 375], [PARAM.DELAY_FEEDBACK, 0.4],
         [PARAM.DELAY_TONE, 0.6], [PARAM.DELAY_MIX, 0],
         [PARAM.REVERB_DECAY, 0.7], [PARAM.REVERB_DAMPING, 0.7], [PARAM.REVERB_MIX, 0],
+        [PARAM.DIST_DRIVE, 0.3], [PARAM.DIST_TONE, 0.5],
+        [PARAM.DIST_LEVEL, 0.7], [PARAM.DIST_MIX, 0],
+        [PARAM.OCTAVE_DRY, 1], [PARAM.OCTAVE_SUB, 0], [PARAM.OCTAVE_UP, 0],
     ];
     // Apply overrides
     const map = new Map(defaults);

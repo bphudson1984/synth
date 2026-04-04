@@ -148,6 +148,15 @@ export const PARAM = {
     REVERB_DECAY: 57,
     REVERB_DAMPING: 58,
     REVERB_MIX: 59,
+    // Distortion
+    DIST_DRIVE: 70,
+    DIST_TONE: 71,
+    DIST_LEVEL: 72,
+    DIST_MIX: 73,
+    // Octave
+    OCTAVE_DRY: 74,
+    OCTAVE_SUB: 75,
+    OCTAVE_UP: 76,
     // Arpeggiator
     ARP_MODE: 60,
     ARP_DIVISION: 61,

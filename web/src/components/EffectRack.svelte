@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { fxOrder, chorusRate, chorusDepth, chorusMix, delayTime, delayFeedback, delayTone, delayMix, reverbDecay, reverbDamping, reverbMix } from '../stores/params';
+    import { fxOrder, chorusRate, chorusDepth, chorusMix, delayTime, delayFeedback, delayTone, delayMix, reverbDecay, reverbDamping, reverbMix, distDrive, distTone, distLevel, distMix, octaveDry, octaveSub, octaveUp } from '../stores/params';
     import Knob from './Knob.svelte';
 
     // Effect definitions: id matches the WASM effect index
@@ -7,6 +7,8 @@
         { id: 0, name: 'CHORUS' },
         { id: 1, name: 'DELAY' },
         { id: 2, name: 'REVERB' },
+        { id: 3, name: 'DISTORTION' },
+        { id: 4, name: 'OCTAVE' },
     ];
 
     let dragIdx: number | null = null;
@@ -92,9 +94,22 @@
                     <Knob label="DAMP" store={reverbDamping} />
                     <Knob label="MIX" store={reverbMix} />
                 </div>
+            {:else if effect.id === 3}
+                <div class="row">
+                    <Knob label="DRIVE" store={distDrive} />
+                    <Knob label="TONE" store={distTone} />
+                    <Knob label="LEVEL" store={distLevel} />
+                    <Knob label="MIX" store={distMix} />
+                </div>
+            {:else if effect.id === 4}
+                <div class="row">
+                    <Knob label="DRY" store={octaveDry} />
+                    <Knob label="SUB" store={octaveSub} />
+                    <Knob label="UP" store={octaveUp} />
+                </div>
             {/if}
         </section>
-        {#if slotIdx < 2}
+        {#if slotIdx < 4}
             <div class="divider"></div>
         {/if}
     </div>

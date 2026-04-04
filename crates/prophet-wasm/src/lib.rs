@@ -7,9 +7,11 @@ use dsp_common::note_sequencer::MAX_STEPS;
 use fx_dsp::chorus::StereoChorus;
 use fx_dsp::delay::TapeDelay;
 use fx_dsp::reverb::PlateReverb;
+use fx_dsp::distortion::TubeDistortion;
+use fx_dsp::octave::OctavePedal;
 
 /// Number of effects in the serial FX chain.
-const NUM_FX: usize = 3;
+const NUM_FX: usize = 5;
 
 static mut SYNTH: Option<ProphetSynth> = None;
 static mut ARP: Option<Arpeggiator> = None;
@@ -17,14 +19,17 @@ static mut ARP_LAST_NOTE: u8 = 0;
 static mut LEFT_BUF: [f32; 512] = [0.0; 512];
 static mut RIGHT_BUF: [f32; 512] = [0.0; 512];
 
-// Serial FX chain: chorus (0), delay (1), reverb (2)
+// Serial FX chain: chorus (0), delay (1), reverb (2), distortion (3), octave (4)
 static mut CHORUS: Option<StereoChorus> = None;
 static mut DELAY: Option<TapeDelay> = None;
 static mut REVERB: Option<PlateReverb> = None;
+static mut DIST: Option<TubeDistortion> = None;
+static mut OCTAVE: Option<OctavePedal> = None;
 
-/// Effect processing order. Each element is an effect index (0=chorus, 1=delay, 2=reverb).
+/// Effect processing order. Each element is an effect index
+/// (0=chorus, 1=delay, 2=reverb, 3=distortion, 4=octave).
 /// Effects are processed serially: output of FX_ORDER[0] feeds into FX_ORDER[1], etc.
-static mut FX_ORDER: [u8; NUM_FX] = [0, 1, 2];
+static mut FX_ORDER: [u8; NUM_FX] = [0, 1, 2, 3, 4];
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -53,7 +58,9 @@ pub extern "C" fn init(sample_rate: f32) {
         CHORUS = Some(StereoChorus::new(sample_rate));
         DELAY = Some(TapeDelay::new(sample_rate));
         REVERB = Some(PlateReverb::new(sample_rate));
-        FX_ORDER = [0, 1, 2];
+        DIST = Some(TubeDistortion::new(sample_rate));
+        OCTAVE = Some(OctavePedal::new(sample_rate));
+        FX_ORDER = [0, 1, 2, 3, 4];
     }
 }
 
@@ -65,6 +72,8 @@ unsafe fn process_effect(idx: u8, left: f32, right: f32) -> (f32, f32) {
         0 => CHORUS.as_mut().unwrap().process_stereo(left, right),
         1 => DELAY.as_mut().unwrap().process(left, right),
         2 => REVERB.as_mut().unwrap().process_stereo(left, right),
+        3 => DIST.as_mut().unwrap().process(left, right),
+        4 => OCTAVE.as_mut().unwrap().process(left, right),
         _ => (left, right),
     }
 }
@@ -134,7 +143,8 @@ pub extern "C" fn note_off(note: u8) {
 }
 
 /// Generic parameter setter. IDs 0-47 are synth params (delegated to DSP),
-/// 50-59 are effects (routed to FX chain), 60-67 are arpeggiator.
+/// 50-59 are chorus/delay/reverb, 60-67 are arpeggiator,
+/// 70-73 are distortion, 74-76 are octave.
 #[no_mangle]
 pub extern "C" fn set_param(id: u32, value: f32) {
     unsafe {
@@ -154,6 +164,15 @@ pub extern "C" fn set_param(id: u32, value: f32) {
             57 => { if let Some(r) = REVERB.as_mut() { r.decay = value.min(0.99); } }
             58 => { if let Some(r) = REVERB.as_mut() { r.damping = value; } }
             59 => { if let Some(r) = REVERB.as_mut() { r.mix = value; } }
+            // Distortion (70-73)
+            70 => { if let Some(d) = DIST.as_mut() { d.drive = value; } }
+            71 => { if let Some(d) = DIST.as_mut() { d.tone = value; } }
+            72 => { if let Some(d) = DIST.as_mut() { d.level = value; } }
+            73 => { if let Some(d) = DIST.as_mut() { d.mix = value; } }
+            // Octave (74-76)
+            74 => { if let Some(o) = OCTAVE.as_mut() { o.dry = value; } }
+            75 => { if let Some(o) = OCTAVE.as_mut() { o.sub = value; } }
+            76 => { if let Some(o) = OCTAVE.as_mut() { o.up = value; } }
             // Arpeggiator (60-67)
             60 => { ARP.as_mut().unwrap().mode = ArpMode::from_u8(value as u8); }
             61 => { ARP.as_mut().unwrap().division = ArpDivision::from_u8(value as u8); }
@@ -169,18 +188,23 @@ pub extern "C" fn set_param(id: u32, value: f32) {
 }
 
 /// Set the FX chain processing order.
-/// Each argument is an effect index: 0=chorus, 1=delay, 2=reverb.
-/// Effects are processed serially in the order (slot0 -> slot1 -> slot2).
-/// Arguments must be a permutation of [0, 1, 2]; invalid values are ignored.
+/// Each argument is an effect index: 0=chorus, 1=delay, 2=reverb, 3=distortion, 4=octave.
+/// Effects are processed serially in the order (slot0 -> slot1 -> slot2 -> slot3 -> slot4).
+/// Arguments must be a permutation of [0, 1, 2, 3, 4]; invalid values are ignored.
 #[no_mangle]
-pub extern "C" fn set_fx_order(slot0: u8, slot1: u8, slot2: u8) {
-    // Validate: must be a permutation of [0, 1, 2]
-    if slot0 > 2 || slot1 > 2 || slot2 > 2 { return; }
-    if slot0 == slot1 || slot0 == slot2 || slot1 == slot2 { return; }
+pub extern "C" fn set_fx_order(slot0: u8, slot1: u8, slot2: u8, slot3: u8, slot4: u8) {
+    let slots = [slot0, slot1, slot2, slot3, slot4];
+    // Validate: each must be in 0..5 and all distinct
+    for &s in &slots {
+        if s >= NUM_FX as u8 { return; }
+    }
+    for i in 0..slots.len() {
+        for j in (i + 1)..slots.len() {
+            if slots[i] == slots[j] { return; }
+        }
+    }
     unsafe {
-        FX_ORDER[0] = slot0;
-        FX_ORDER[1] = slot1;
-        FX_ORDER[2] = slot2;
+        FX_ORDER = slots;
     }
 }
 
