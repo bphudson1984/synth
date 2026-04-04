@@ -8,6 +8,7 @@ import type { FxEngine } from '../../fx/audio/engine';
  */
 export abstract class BaseEngine {
     protected node: AudioWorkletNode | null = null;
+    protected channelGain: GainNode | null = null;
     protected panner: StereoPannerNode | null = null;
     protected sendGains: GainNode[] = [];
     protected _ready = false;
@@ -32,11 +33,15 @@ export abstract class BaseEngine {
             const isFirefox = /Firefox/.test(navigator.userAgent);
             this.node!.port.postMessage({ type: 'wasm-bytes', bytes: wasmBytes, useDoubleBuffer: isFirefox }, [wasmBytes]);
         });
+        this.channelGain = ctx.createGain();
         this.panner = ctx.createStereoPanner();
-        this.node.connect(this.panner);
+        this.node.connect(this.channelGain);
+        this.channelGain.connect(this.panner);
         this.panner.connect(ctx.destination);
     }
 
+    /** Set the mixer channel gain (0-1). Used by the mixer faders for pre-mix level control. */
+    setChannelGain(gain: number) { if (this.channelGain) this.channelGain.gain.value = Math.max(0, Math.min(1, gain)); }
     setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
 

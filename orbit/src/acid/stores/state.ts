@@ -29,7 +29,7 @@ export function setAcidEngine(e: AcidEngine) {
         lastAcidStep = step;
     };
     bpm.subscribe((value) => { engine?.seqSetBpm(value); });
-    registerMixerCallback('acid', (gain) => { engine?.setParam(PARAM.VOLUME, gain); }, (pan) => { engine?.setPan(pan); });
+    registerMixerCallback('acid', (gain) => { engine?.setChannelGain(gain); }, (pan) => { engine?.setPan(pan); });
     registerEngine({
         play: () => { lastAcidStep = -1; engine?.seqSetBpm(get(bpm)); engine?.seqPlay(); },
         stop: () => { engine?.seqStop(); currentStep.set(0); lastAcidStep = -1; },

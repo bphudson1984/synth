@@ -34,7 +34,7 @@ export function setBassEngine(e: BassEngine) {
     };
     bassSeq.connectEngine(e);
     bpm.subscribe(() => {});
-    registerMixerCallback('bass', (gain) => { engine?.setParam(PARAM.VOLUME, gain); }, (pan) => { engine?.setPan(pan); });
+    registerMixerCallback('bass', (gain) => { engine?.setChannelGain(gain); }, (pan) => { engine?.setPan(pan); });
 }
 
 // Note triggering

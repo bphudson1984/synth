@@ -38,7 +38,7 @@ export function setPadEngine(e: ProphetEngine) {
             engine.setParam(PARAM.ARP_BPM, value);
         }
     });
-    registerMixerCallback('pad', (gain) => { engine?.setParam(PARAM.MASTER_VOL, gain); }, (pan) => { engine?.setPan(pan); });
+    registerMixerCallback('pad', (gain) => { engine?.setChannelGain(gain); }, (pan) => { engine?.setPan(pan); });
 }
 
 // Preset
