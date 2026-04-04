@@ -105,6 +105,23 @@ export const reverbDecay = paramStore(PARAM.REVERB_DECAY, 0.7);
 export const reverbDamping = paramStore(PARAM.REVERB_DAMPING, 0.7);
 export const reverbMix = paramStore(PARAM.REVERB_MIX, 0.0);
 
+// Distortion
+export const distDrive = paramStore(PARAM.DIST_DRIVE, 0.3);
+export const distTone = paramStore(PARAM.DIST_TONE, 0.5);
+export const distLevel = paramStore(PARAM.DIST_LEVEL, 0.7);
+export const distMix = paramStore(PARAM.DIST_MIX, 0.0);
+
+// Octave
+export const octaveDry = paramStore(PARAM.OCTAVE_DRY, 1.0);
+export const octaveSub = paramStore(PARAM.OCTAVE_SUB, 0.0);
+export const octaveUp = paramStore(PARAM.OCTAVE_UP, 0.0);
+
+// FX Chain order: [chorus=0, delay=1, reverb=2, distortion=3, octave=4] — indices into the effect slots
+export const fxOrder = writable([0, 1, 2, 3, 4]);
+fxOrder.subscribe(order => {
+    engine?.setFxOrder(order);
+});
+
 // Arpeggiator
 export const arpMode = paramStore(PARAM.ARP_MODE, 0); // 0=off, 1=up, 2=down, 3=updown, 4=updown excl, 5=random, 6=order
 export const arpDivision = paramStore(PARAM.ARP_DIVISION, 1); // 0=1/4, 1=1/8, 2=1/16, 3=1/32, 4=dotted 1/8, 5=triplet 1/8

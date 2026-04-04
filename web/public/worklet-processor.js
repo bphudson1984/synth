@@ -41,6 +41,9 @@ class ProphetProcessor extends AudioWorkletProcessor {
             case 'set-param':
                 if (this.ready) this.wasm.set_param(data.id, data.value);
                 break;
+            case 'set-fx-order':
+                if (this.ready) this.wasm.set_fx_order(data.order[0], data.order[1], data.order[2], data.order[3], data.order[4]);
+                break;
         }
     }
 

@@ -6,6 +6,7 @@
     import Knob from './components/Knob.svelte';
     import Switch from './components/Switch.svelte';
     import Keyboard from './components/Keyboard.svelte';
+    import EffectRack from './components/EffectRack.svelte';
 
     let engine: AudioEngine;
     let started = false;
@@ -291,33 +292,7 @@
 
                     <div class="divider"></div>
 
-                    <section>
-                        <h3>CHORUS</h3>
-                        <div class="row">
-                            <Knob label="RATE" store={p.chorusRate} min={0.1} max={5} />
-                            <Knob label="DEPTH" store={p.chorusDepth} />
-                            <Knob label="MIX" store={p.chorusMix} />
-                        </div>
-                    </section>
-                    <div class="divider"></div>
-                    <section>
-                        <h3>DELAY</h3>
-                        <div class="row">
-                            <Knob label="TIME" store={p.delayTime} min={1} max={2000} />
-                            <Knob label="FDBK" store={p.delayFeedback} min={0} max={0.95} />
-                            <Knob label="TONE" store={p.delayTone} />
-                            <Knob label="MIX" store={p.delayMix} />
-                        </div>
-                    </section>
-                    <div class="divider"></div>
-                    <section>
-                        <h3>REVERB</h3>
-                        <div class="row">
-                            <Knob label="DECAY" store={p.reverbDecay} min={0} max={0.99} />
-                            <Knob label="DAMP" store={p.reverbDamping} />
-                            <Knob label="MIX" store={p.reverbMix} />
-                        </div>
-                    </section>
+                    <EffectRack />
                 </div>
             </div>
 
