@@ -52,6 +52,14 @@
                 { id: 2, name: 'LEVEL', min: 0, max: 1 },
             ],
         },
+        {
+            effectId: 4, label: 'OCTAVE',
+            params: [
+                { id: 0, name: 'DRY', min: 0, max: 1 },
+                { id: 1, name: 'SUB', min: 0, max: 1 },
+                { id: 2, name: 'UP',  min: 0, max: 1 },
+            ],
+        },
     ];
 
     const CHANNELS: { id: ChannelId; label: string; colour: string }[] = [

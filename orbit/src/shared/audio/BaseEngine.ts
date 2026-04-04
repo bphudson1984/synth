@@ -45,11 +45,11 @@ export abstract class BaseEngine {
     setPan(value: number) { if (this.panner) this.panner.pan.value = value; }
     setParam(id: number, value: number) { this.node?.port.postMessage({ type: 'set-param', id, value }); }
 
-    /** Create 4 send gain nodes from this engine to the FX rack buses. */
+    /** Create 5 send gain nodes from this engine to the FX rack buses. */
     connectSends(fxEngine: FxEngine): void {
         if (!this.panner) return;
         const ctx = this.panner.context as AudioContext;
-        const buses = [fxEngine.chorusBus, fxEngine.delayBus, fxEngine.reverbBus, fxEngine.distBus];
+        const buses = [fxEngine.chorusBus, fxEngine.delayBus, fxEngine.reverbBus, fxEngine.distBus, fxEngine.octaveBus];
         for (const bus of buses) {
             const send = ctx.createGain();
             send.gain.value = 0; // sends start muted
@@ -59,7 +59,7 @@ export abstract class BaseEngine {
         }
     }
 
-    /** Set the send level for one effect (0=chorus, 1=delay, 2=reverb, 3=distortion). */
+    /** Set the send level for one effect (0=chorus, 1=delay, 2=reverb, 3=distortion, 4=octave). */
     setSendLevel(effectIndex: number, level: number): void {
         if (this.sendGains[effectIndex]) {
             this.sendGains[effectIndex].gain.value = level;

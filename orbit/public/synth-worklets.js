@@ -278,7 +278,7 @@ createSynthProcessor('tr808-processor', (wasm, data) => {
     }
 });
 
-// --- FX Rack processor (4 stereo inputs → 1 stereo output) ---
+// --- FX Rack processor (5 stereo inputs → 1 stereo output) ---
 
 class FxProcessor extends AudioWorkletProcessor {
     constructor() {
@@ -304,6 +304,7 @@ class FxProcessor extends AudioWorkletProcessor {
                     [this.wasm.get_delay_in_l_ptr() / 4,  this.wasm.get_delay_in_r_ptr() / 4],
                     [this.wasm.get_reverb_in_l_ptr() / 4, this.wasm.get_reverb_in_r_ptr() / 4],
                     [this.wasm.get_dist_in_l_ptr() / 4,   this.wasm.get_dist_in_r_ptr() / 4],
+                    [this.wasm.get_octave_in_l_ptr() / 4, this.wasm.get_octave_in_r_ptr() / 4],
                 ];
                 this.outL = this.wasm.get_out_l_ptr() / 4;
                 this.outR = this.wasm.get_out_r_ptr() / 4;
@@ -329,8 +330,8 @@ class FxProcessor extends AudioWorkletProcessor {
             this.memoryView = new Float32Array(this.memoryBuf);
         }
 
-        // Copy 4 stereo inputs into WASM buffers
-        for (let i = 0; i < 4; i++) {
+        // Copy 5 stereo inputs into WASM buffers
+        for (let i = 0; i < 5; i++) {
             const inp = inputs[i];
             const [ptrL, ptrR] = this.ptrs[i];
             if (inp && inp.length > 0 && inp[0] && inp[0].length > 0) {

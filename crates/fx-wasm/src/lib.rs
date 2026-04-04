@@ -1,15 +1,16 @@
 //! FX rack WASM wrapper.
-//! Provides 4 stereo effect processors (chorus, delay, reverb, distortion)
-//! with 4 stereo input buffers and 1 summed stereo output.
+//! Provides 5 stereo effect processors (chorus, delay, reverb, distortion, octave)
+//! with 5 stereo input buffers and 1 summed stereo output.
 
 use fx_dsp::chorus::StereoChorus;
 use fx_dsp::delay::TapeDelay;
 use fx_dsp::reverb::PlateReverb;
 use fx_dsp::distortion::TubeDistortion;
+use fx_dsp::octave::OctavePedal;
 
 const BUF: usize = 512;
 
-// 4 stereo input buffer pairs (one per effect bus)
+// 5 stereo input buffer pairs (one per effect bus)
 static mut CHORUS_IN_L: [f32; BUF] = [0.0; BUF];
 static mut CHORUS_IN_R: [f32; BUF] = [0.0; BUF];
 static mut DELAY_IN_L:  [f32; BUF] = [0.0; BUF];
@@ -18,8 +19,10 @@ static mut REVERB_IN_L: [f32; BUF] = [0.0; BUF];
 static mut REVERB_IN_R: [f32; BUF] = [0.0; BUF];
 static mut DIST_IN_L:   [f32; BUF] = [0.0; BUF];
 static mut DIST_IN_R:   [f32; BUF] = [0.0; BUF];
+static mut OCTAVE_IN_L: [f32; BUF] = [0.0; BUF];
+static mut OCTAVE_IN_R: [f32; BUF] = [0.0; BUF];
 
-// 1 stereo output (sum of all 4 wet signals)
+// 1 stereo output (sum of all 5 wet signals)
 static mut OUT_L: [f32; BUF] = [0.0; BUF];
 static mut OUT_R: [f32; BUF] = [0.0; BUF];
 
@@ -27,6 +30,7 @@ static mut CHORUS: Option<StereoChorus> = None;
 static mut DELAY:  Option<TapeDelay> = None;
 static mut REVERB: Option<PlateReverb> = None;
 static mut DIST:   Option<TubeDistortion> = None;
+static mut OCTAVE: Option<OctavePedal> = None;
 
 #[no_mangle]
 pub extern "C" fn init(sample_rate: f32) {
@@ -46,6 +50,9 @@ pub extern "C" fn init(sample_rate: f32) {
         let mut dist = TubeDistortion::new(sample_rate);
         dist.mix = 1.0;
         DIST = Some(dist);
+
+        let octave = OctavePedal::new(sample_rate);
+        OCTAVE = Some(octave);
     }
 }
 
@@ -56,6 +63,7 @@ pub extern "C" fn process(num_samples: u32) {
         let delay = DELAY.as_mut().unwrap();
         let reverb = REVERB.as_mut().unwrap();
         let dist = DIST.as_mut().unwrap();
+        let octave = OCTAVE.as_mut().unwrap();
 
         let n = (num_samples as usize).min(BUF);
         for i in 0..n {
@@ -71,15 +79,18 @@ pub extern "C" fn process(num_samples: u32) {
             // Distortion: stereo in -> stereo out
             let (dt_l, dt_r) = dist.process(DIST_IN_L[i], DIST_IN_R[i]);
 
+            // Octave: stereo in -> stereo out
+            let (oc_l, oc_r) = octave.process(OCTAVE_IN_L[i], OCTAVE_IN_R[i]);
+
             // Sum all wet outputs
-            OUT_L[i] = ch_l + dl_l + rv_l + dt_l;
-            OUT_R[i] = ch_r + dl_r + rv_r + dt_r;
+            OUT_L[i] = ch_l + dl_l + rv_l + dt_l + oc_l;
+            OUT_R[i] = ch_r + dl_r + rv_r + dt_r + oc_r;
         }
     }
 }
 
 /// Set an effect parameter.
-/// effect_id: 0=chorus, 1=delay, 2=reverb, 3=distortion
+/// effect_id: 0=chorus, 1=delay, 2=reverb, 3=distortion, 4=octave
 #[no_mangle]
 pub extern "C" fn set_param(effect_id: u32, param_id: u32, value: f32) {
     unsafe {
@@ -118,6 +129,15 @@ pub extern "C" fn set_param(effect_id: u32, param_id: u32, value: f32) {
                     _ => {}
                 }
             },
+            // Octave: 0=dry, 1=sub, 2=up
+            4 => if let Some(o) = OCTAVE.as_mut() {
+                match param_id {
+                    0 => o.dry = value,
+                    1 => o.sub = value,
+                    2 => o.up = value,
+                    _ => {}
+                }
+            },
             _ => {}
         }
     }
@@ -132,5 +152,7 @@ pub extern "C" fn set_param(effect_id: u32, param_id: u32, value: f32) {
 #[no_mangle] pub extern "C" fn get_reverb_in_r_ptr() -> *const f32 { unsafe { REVERB_IN_R.as_ptr() } }
 #[no_mangle] pub extern "C" fn get_dist_in_l_ptr()   -> *const f32 { unsafe { DIST_IN_L.as_ptr() } }
 #[no_mangle] pub extern "C" fn get_dist_in_r_ptr()   -> *const f32 { unsafe { DIST_IN_R.as_ptr() } }
+#[no_mangle] pub extern "C" fn get_octave_in_l_ptr() -> *const f32 { unsafe { OCTAVE_IN_L.as_ptr() } }
+#[no_mangle] pub extern "C" fn get_octave_in_r_ptr() -> *const f32 { unsafe { OCTAVE_IN_R.as_ptr() } }
 #[no_mangle] pub extern "C" fn get_out_l_ptr()       -> *const f32 { unsafe { OUT_L.as_ptr() } }
 #[no_mangle] pub extern "C" fn get_out_r_ptr()       -> *const f32 { unsafe { OUT_R.as_ptr() } }
